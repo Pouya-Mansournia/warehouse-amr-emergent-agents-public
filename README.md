@@ -1,6 +1,8 @@
 # warehouse-amr-emergent-agents
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21961193.svg)](https://doi.org/10.5281/zenodo.21961193)
+[![CI](https://github.com/Pouya-Mansournia/warehouse-amr-emergent-agents-public/actions/workflows/ci.yml/badge.svg)](https://github.com/Pouya-Mansournia/warehouse-amr-emergent-agents-public/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-BSD--3--Clause-blue.svg)](LICENSE)
 
 A research platform for studying decentralized, fault-tolerant, agentic coordination in a multi-robot warehouse fleet, built on ROS 2 Jazzy and Gazebo Harmonic.
 
