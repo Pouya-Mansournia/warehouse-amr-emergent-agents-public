@@ -14,6 +14,10 @@ When a fleet loses its centralized manager, can the robots recover useful coordi
 
 I built this on top of an earlier project of mine, [warehouse-amr-ros2](https://github.com/Pouya-Mansournia/warehouse-amr-ros2), adding experiment orchestration, robot health and fault modeling, five coordination modes, and a second isolated long-horizon world, all instrumented for reproducible measurement.
 
+<p align="center">
+  <img src="assets/readme/demo.gif" alt="Gazebo simulation of the multi-robot warehouse fleet navigating the grid during an experiment run" width="640">
+</p>
+
 ## Architecture
 
 ```mermaid
