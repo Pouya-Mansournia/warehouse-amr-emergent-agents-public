@@ -85,8 +85,8 @@ phase2/                   Isolated, additive long-horizon extension: a
                          experiments needing many seeds and thousands of
                          simulated seconds per run. See phase2/README.md
                          for its own isolation rules.
-docs/                     Architecture, metric definitions, and
-                         reproducibility documentation.
+docs/                     Short technical notes: architecture, metrics,
+                         and known limitations.
 ```
 
 `experiments/` and `phase2/experiments/` hold raw per-run evidence and are intentionally not tracked in this repository. See Reproducibility below for how to regenerate them.
@@ -128,7 +128,7 @@ python3 analysis/scripts/run_batch.py \
 python3 analysis/scripts/generate_report.py <batch_dir>
 ```
 
-Every run produces an immutable directory under `experiments/<run_id>/` containing raw event logs, per-robot telemetry CSVs, a rosbag, and a computed `summary.json`. That's enough to reconstruct exactly what happened without re-running anything. See [`docs/reproducibility.md`](docs/reproducibility.md).
+Every run produces an immutable directory under `experiments/<run_id>/` containing raw event logs, per-robot telemetry CSVs, a rosbag, and a computed `summary.json`. That's enough to reconstruct exactly what happened without re-running anything. See [`docs/notes.md`](docs/notes.md).
 
 ### The long-horizon extension (`phase2/`)
 
@@ -174,7 +174,7 @@ See [`analysis/results/resilience_summary.csv`](analysis/results/resilience_summ
 
 ## Reproducibility
 
-Every run produces an immutable, self-contained output directory (see Getting Started above). [`docs/reproducibility.md`](docs/reproducibility.md) documents exactly what is captured per run and how to reconstruct it. Simulated-time control (`--time-source simulation`) is used throughout so timing-sensitive results don't depend on host wall-clock performance.
+Every run produces an immutable, self-contained output directory (see Getting Started above). [`docs/notes.md`](docs/notes.md) documents exactly what is captured per run and how to reconstruct it. Simulated-time control (`--time-source simulation`) is used throughout so timing-sensitive results don't depend on host wall-clock performance.
 
 ## Safety architecture
 
@@ -182,7 +182,7 @@ Every LLM-backed decision (Modes D and E) passes through the same schema and saf
 
 ## Limitations
 
-See [`docs/current_limitations.md`](docs/current_limitations.md) for the maintained, up-to-date status of every subsystem: what is implemented, validated, or not yet done. Notable current limitations: live validation has used at most 2 robots (Family I) and 4 robots (`phase2/`), the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions.
+See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, validated, or not yet done. Notable current limitations: live validation has used at most 2 robots (Family I) and 4 robots (`phase2/`), the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions.
 
 ## Roadmap
 
@@ -193,15 +193,12 @@ See [`docs/current_limitations.md`](docs/current_limitations.md) for the maintai
 
 ## Documentation
 
-- [`docs/architecture.md`](docs/architecture.md): inherited baseline architecture.
-- [`docs/current_limitations.md`](docs/current_limitations.md): honest, up-to-date status of every subsystem. Read this before trusting any specific claim about what the platform measures.
-- [`docs/recovery_definition.md`](docs/recovery_definition.md): precise definition of the recovery-time and throughput-retention metrics.
-- [`docs/reproducibility.md`](docs/reproducibility.md): what's captured per run and how to reconstruct it.
+- [`docs/notes.md`](docs/notes.md): architecture, metric definitions, reproducibility, and known limitations, in one place.
 - [`phase2/README.md`](phase2/README.md): the long-horizon extension's own scope and isolation rules.
 
 ## Research integrity
 
-This project follows one rule throughout its development history: never fabricate a result. Every "done" claim in the docs above is backed by a live-validated run described alongside it. Metrics this platform genuinely can't measure yet, like collision detection, are reported as `not measured` rather than filled in with a plausible-looking number. `docs/current_limitations.md` exists specifically to keep that distinction visible.
+This project follows one rule throughout: never fabricate a result. Metrics this platform genuinely can't measure yet, like collision detection, are reported as `not measured` rather than filled in with a plausible-looking number.
 
 ## Citation
 

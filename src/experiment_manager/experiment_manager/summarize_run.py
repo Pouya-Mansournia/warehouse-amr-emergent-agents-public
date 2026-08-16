@@ -351,14 +351,14 @@ def build_summary(run_dir: Path) -> dict:
     # implementation's live validation) that would otherwise measure "how many wall-clock seconds after a
     # simulated fault time" as if they were comparable.
     #
-    # Recovery definition (docs/recovery_definition.md): a task counts as "recovery"
+    # Recovery definition (docs/notes.md): a task counts as "recovery"
     # only if it was BOTH assigned (EXECUTING) AND completed (SUCCEEDED) after
     # t_fail_sec - not merely completed after it. A task assigned before the fault that
     # simply finishes late (its goal was already in flight; Nav2 doesn't need the
     # central node to finish an in-progress goal) is NOT recovery, it's the tail of
     # pre-existing work. This was a real, live-confirmed false positive (the same
     # class of mistake also surfaced in the failover heartbeat-timeout logic; see
-    # docs/current_limitations.md) - fixed here by requiring BOTH endpoints of the
+    # docs/notes.md) - fixed here by requiring BOTH endpoints of the
     # EXECUTING->SUCCEEDED pair to fall after the fault, via _completed_task_cycles.
     resilience_summary = None
     t_fail_sec = metadata.get("t_fail_sec")

@@ -1,7 +1,7 @@
 """Experiment directory layout and metadata helpers.
 
 Creates one immutable directory per run under experiments/, as required
-by docs/architecture.md's Phase 1 acceptance criterion: reconstruct what
+by docs/notes.md's Phase 1 acceptance criterion: reconstruct what
 happened purely from saved data. Never overwrites an existing run.
 """
 from __future__ import annotations

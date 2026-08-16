@@ -70,6 +70,6 @@ that holds the backend constant.
 
 ## Status
 
-See `docs/current_limitations.md`-equivalent status notes to be added here
-once the pilot campaign (4 conditions x 5 paired seeds x 3000 simulated
-seconds, `phase2/experiments/pilot_001/`) completes and is analyzed.
+Pilot campaign: 4 conditions x 5 paired seeds x 3000 simulated seconds
+(`phase2/experiments/pilot_001/`). See `docs/notes.md` and
+`phase2/analysis/results/` for the analyzed results.

@@ -35,5 +35,5 @@ jobs:
         run: python3 -m pytest phase2/test -q
 
   # Full ROS 2 + Gazebo embodied simulation is not run in CI - it is
-  # computationally impractical on hosted runners (see docs/current_limitations.md
+  # computationally impractical on hosted runners (see docs/notes.md
   # for this platform's own documented realtime-factor constraints).

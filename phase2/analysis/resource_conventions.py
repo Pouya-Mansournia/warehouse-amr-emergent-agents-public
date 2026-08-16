@@ -5,7 +5,7 @@ Every field here is derived from real logged events - `CHARGER_REQUEST`
 normal finish) from `interactions.jsonl`, cross-referenced with
 `robot_states.jsonl` for battery SOC at request time. No convention label
 (lower-SOC-priority, round-robin, dominant-user, ...) is asserted without a
-computed rate/index backing it - see `docs/current_limitations.md`'s
+computed rate/index backing it - see `docs/notes.md`'s
 "never fabricate a result" rule, which Phase II inherits by choice, not by
 being forced to (Phase II is a separate codebase).
 """
