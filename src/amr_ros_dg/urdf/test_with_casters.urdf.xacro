@@ -1,0 +1,270 @@
+<?xml version="1.0"?>
+<!-- Diagnostic file: base_link + drive wheels + CASTERS (no sensors).
+     Physics tuning here mirrors amr_ros_dg.urdf.xacro - see that file's header for the
+     full rationale (drive wheels do traction, casters are tip-over support only, both
+     wheel bottoms + all 4 caster bottoms need to sit on matched planes for dartsim). -->
+<robot name="amr_ros_dg_test_casters" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="mesh_scale" value="1 1 1" />
+  <xacro:property name="body_color" value="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+
+  <material name="amr_body_grey">
+    <color rgba="${body_color}" />
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.0310943353661127 0.00027531991751642 -0.12487536514683" rpy="0 0 0" />
+      <mass value="21.3046134591674" />
+      <inertia
+        ixx="0.29613665577097" ixy="0.00195367305083866" ixz="4.4307398501902E-05"
+        iyy="0.422473357982575" iyz="-2.20145006753063E-07" izz="0.697298060229463" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://amr_ros_dg/meshes/base_link.STL" scale="${mesh_scale}" />
+      </geometry>
+      <material name="amr_body_grey" />
+    </visual>
+  </link>
+
+  <xacro:macro name="drive_wheel"
+    params="name mesh
+            mass cx cy cz ixx ixy ixz iyy iyz izz
+            jx jy jz ax ay az
+            col_radius col_length col_oy">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${cx} ${cy} ${cz}" rpy="0 0 0" />
+        <mass value="${mass}" />
+        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_body_grey" />
+      </visual>
+      <collision>
+        <origin xyz="0 ${col_oy} 0" rpy="1.5707963 0 0" />
+        <geometry>
+          <cylinder radius="${col_radius}" length="${col_length}" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <origin xyz="${jx} ${jy} ${jz}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="${name}" />
+      <axis xyz="${ax} ${ay} ${az}" />
+      <limit effort="20.0" velocity="30.0" />
+      <dynamics damping="0.0" friction="0.0" />
+    </joint>
+  </xacro:macro>
+
+  <!-- col_radius on both wheels: real jz values put the right wheel's bottom 0.06mm lower
+       than the left's; nudged both radii (not jz) so both land on the same plane. -->
+  <xacro:drive_wheel name="left_wheel" mesh="left_wheel.STL"
+    mass="0.585665991952606"
+    cx="-0.000108392816681013" cy="-0.0253615400637083" cz="-0.000239450250214657"
+    ixx="0.000928521729613518" ixy="-1.14250082228267E-10" ixz="1.00749289393112E-09"
+    iyy="0.00168853495795271" iyz="-2.52341752508342E-10" izz="0.000928564707830947"
+    jx="0.00010849" jy="0.2895" jz="-0.16929" ax="0" ay="1" az="0"
+    col_radius="0.07503" col_length="0.051" col_oy="-0.025" />
+
+  <xacro:drive_wheel name="right_wheel" mesh="right_wheel.STL"
+    mass="0.585665991952566"
+    cx="0.000186897669876618" cy="0.0253615400637088" cz="-0.000184809864538615"
+    ixx="0.000928527905827836" ixy="-1.96980205741672E-10" ixz="-1.51100007177081E-08"
+    iyy="0.00168853495795271" iyz="1.94752032949863E-10" izz="0.000928558531615229"
+    jx="-0.00018706" jy="-0.2895" jz="-0.16935" ax="0" ay="1" az="0"
+    col_radius="0.07497" col_length="0.051" col_oy="0.025" />
+
+  <gazebo reference="left_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- ============================== CASTERS ============================== -->
+  <!-- Caster role: tip-over/pitch support only, not a traction point - see w_col_radius
+       comment below the macro. -->
+  <xacro:macro name="caster_corner"
+    params="name wheel_name housing_mesh wheel_mesh
+            sx sy sz
+            h_mass h_cx h_cy h_cz h_ixx h_ixy h_ixz h_iyy h_iyz h_izz
+            wx wy wz wax way waz
+            w_mass w_cx w_cy w_cz w_ixx w_ixy w_ixz w_iyy w_iyz w_izz
+            w_col_radius w_col_length">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${h_cx} ${h_cy} ${h_cz}" rpy="0 0 0" />
+        <mass value="${h_mass}" />
+        <inertia ixx="${h_ixx}" ixy="${h_ixy}" ixz="${h_ixz}" iyy="${h_iyy}" iyz="${h_iyz}" izz="${h_izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${housing_mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_body_grey" />
+      </visual>
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <origin xyz="${sx} ${sy} ${sz}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="${name}" />
+      <axis xyz="0 0 1" />
+      <!-- effort=2.0 (non-zero avoids dartsim locking a passive joint; kept small so a bad
+           contact-solve step can't inject spurious torque). damping=0.02 (non-zero so the
+           caster settles into trailing orientation instead of oscillating). -->
+      <limit effort="2.0" velocity="30.0" />
+      <dynamics damping="0.02" friction="0.0" />
+    </joint>
+
+    <link name="${wheel_name}">
+      <inertial>
+        <origin xyz="${w_cx} ${w_cy} ${w_cz}" rpy="0 0 0" />
+        <mass value="${w_mass}" />
+        <inertia ixx="${w_ixx}" ixy="${w_ixy}" ixz="${w_ixz}" iyy="${w_iyy}" iyz="${w_iyz}" izz="${w_izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${wheel_mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_body_grey" />
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 1.5707963 0" />
+        <geometry>
+          <cylinder radius="${w_col_radius}" length="${w_col_length}" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${wheel_name}_joint" type="continuous">
+      <origin xyz="${wx} ${wy} ${wz}" rpy="0 0 0" />
+      <parent link="${name}" />
+      <child link="${wheel_name}" />
+      <axis xyz="${wax} ${way} ${waz}" />
+      <!-- Same reasoning as the swivel joint above. -->
+      <limit effort="2.0" velocity="30.0" />
+      <dynamics damping="0.01" friction="0.0" />
+    </joint>
+  </xacro:macro>
+
+  <!-- w_col_radius on all 4 corners: puts the caster wheel bottom ~0.5mm ABOVE the drive
+       wheel bottom, not level with it. The casters are a tip-over/pitch backstop, not a
+       permanent contact point - the drive wheels alone should always bear weight and
+       traction, and a caster only engages once the chassis pitches or rolls enough to close
+       that 0.5mm gap, exactly like a shopping cart's casters barely touching until you lean
+       it. -->
+
+  <!-- front-left -->
+  <xacro:caster_corner name="caster_f_l" wheel_name="caster_wheel_f_l"
+    housing_mesh="caster_f_l.STL" wheel_mesh="caster_wheel_f_l.STL"
+    sx="0.275" sy="0.17" sz="-0.15478"
+    h_mass="0.0343773761631997"
+    h_cx="-0.000211217029093325" h_cy="-0.00488343337310898" h_cz="-0.0278047373445326"
+    h_ixx="7.07816892636274E-06" h_ixy="1.60117057840084E-07" h_ixz="-1.13833743869238E-08"
+    h_iyy="1.07770901763347E-05" h_iyz="-2.74463122286201E-07" h_izz="1.35458216911075E-05"
+    wx="0.00064749" wy="0.014986" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260006277754798" w_cy="-1.12338994395222E-05" w_cz="-5.55111512312578E-17"
+    w_ixx="8.85486982719961E-05" w_ixy="-1.52127688306059E-06" w_ixz="-1.20806832920016E-19"
+    w_iyy="5.34047883182945E-05" w_iyz="1.85942777553269E-19" w_izz="5.33390596302369E-05"
+    w_col_radius="0.03229" w_col_length="0.0365" />
+
+  <!-- front-right -->
+  <xacro:caster_corner name="caster_f_r" wheel_name="caster_wheel_f_r"
+    housing_mesh="caster_f_r.STL" wheel_mesh="caster_wheel_f_r.STL"
+    sx="0.275" sy="-0.17" sz="-0.15478"
+    h_mass="0.034377376177769"
+    h_cx="-2.21908344033572E-07" h_cy="-0.00488799899349841" h_cz="-0.0278047373438943"
+    h_ixx="7.07125079899759E-06" h_ixy="1.59066340376663E-12" h_ixz="4.74709220715998E-10"
+    h_iyy="1.07840083029693E-05" h_iyz="-2.74698674033133E-07" h_izz="1.35458216896774E-05"
+    wx="0" wy="0.015" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260248852002487" w_cy="-2.08166817117217E-17" w_cz="-5.55111512312578E-17"
+    w_ixx="8.86144269600542E-05" w_ixy="1.25769959385598E-19" w_ixz="-1.11966583470812E-19"
+    w_iyy="5.33390596302359E-05" w_iyz="-3.58784234590011E-19" w_izz="5.33390596302365E-05"
+    w_col_radius="0.03229" w_col_length="0.0350" />
+
+  <!-- back-right -->
+  <xacro:caster_corner name="caster_b_r" wheel_name="caster_wheel_b_r"
+    housing_mesh="caster_b_r.STL" wheel_mesh="caster_wheel_b_r.STL"
+    sx="-0.275" sy="-0.17" sz="-0.15478"
+    h_mass="0.0343773762451283"
+    h_cx="-2.21909206808701E-07" h_cy="-0.00488799904923643" h_cz="-0.0278047373832745"
+    h_ixx="7.07125079999909E-06" h_ixy="1.59079082659352E-12" h_ixz="4.74709238887088E-10"
+    h_iyy="1.07840083034564E-05" h_iyz="-2.74698674016186E-07" h_izz="1.35458216910767E-05"
+    wx="0" wy="0.015" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260248852002418" w_cy="-2.77555756156289E-17" w_cz="0"
+    w_ixx="8.86144269600547E-05" w_ixy="1.24136366723561E-19" w_ixz="-1.24445298405647E-19"
+    w_iyy="5.3339059630236E-05" w_iyz="1.76755868611897E-19" w_izz="5.33390596302369E-05"
+    w_col_radius="0.03229" w_col_length="0.0350" />
+
+  <!-- back-left -->
+  <xacro:caster_corner name="caster_b_l" wheel_name="caster_wheel_b_l"
+    housing_mesh="caster_b_l.STL" wheel_mesh="caster_wheel_b_l.STL"
+    sx="-0.275000000000001" sy="0.169999999999999" sz="-0.154782629740985"
+    h_mass="0.0343773762339354"
+    h_cx="-0.000504007629840188" h_cy="-0.00486194519645511" h_cz="-0.0278047373888992"
+    h_ixx="7.11069032397272E-06" h_ixy="3.80623065539692E-07" h_ixz="-2.78399345059836E-08"
+    h_iyy="1.07445687795745E-05" h_iyz="-2.73284695045809E-07" h_izz="1.35458216922227E-05"
+    wx="0.001546" wy="0.01492" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000258862899684381" w_cy="-2.68228286273153E-05" w_cz="0"
+    w_ixx="8.82397102592137E-05" w_ixy="-3.61633193455675E-06" w_ixz="-1.0319517758726E-19"
+    w_iyy="5.37137763310779E-05" w_iyz="1.7418729813812E-19" w_izz="5.3339059630236E-05"
+    w_col_radius="0.03229" w_col_length="0.0384" />
+
+  <!-- Caster wheel friction: LOW, not 1.0 like the drive wheels, but not near-zero either -
+       enough to arrest motion at rest without overpowering the drive wheels if a caster is
+       momentarily skewed. -->
+  <xacro:macro name="caster_wheel_friction" params="link">
+    <gazebo reference="${link}">
+      <mu1>0.15</mu1>
+      <mu2>0.15</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:caster_wheel_friction link="caster_wheel_f_l" />
+  <xacro:caster_wheel_friction link="caster_wheel_f_r" />
+  <xacro:caster_wheel_friction link="caster_wheel_b_r" />
+  <xacro:caster_wheel_friction link="caster_wheel_b_l" />
+
+  <ros2_control name="amr_ros_dg_system" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="left_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-30.0</param>
+        <param name="max">30.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-30.0</param>
+        <param name="max">30.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find amr_ros_dg)/config/amr_ros_dg_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>

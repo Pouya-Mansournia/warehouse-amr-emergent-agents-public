@@ -1,0 +1,609 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="AMR-ROS-DG">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="-0.0310943353661127 0.00027531991751642 -0.12487536514683"
+        rpy="0 0 0" />
+      <mass
+        value="21.3046134591674" />
+      <inertia
+        ixx="0.29613665577097"
+        ixy="0.00195367305083866"
+        ixz="4.4307398501902E-05"
+        iyy="0.422473357982575"
+        iyz="-2.20145006753063E-07"
+        izz="0.697298060229463" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="left_wheel">
+    <inertial>
+      <origin
+        xyz="-0.000108392816681013 -0.0253615400637083 -0.000239450250214657"
+        rpy="0 0 0" />
+      <mass
+        value="0.585665991952606" />
+      <inertia
+        ixx="0.000928521729613518"
+        ixy="-1.14250082228267E-10"
+        ixz="1.00749289393112E-09"
+        iyy="0.00168853495795271"
+        iyz="-2.52341752508342E-10"
+        izz="0.000928564707830947" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/left_wheel.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/left_wheel.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="left_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="0.00010849 0.2895 -0.16929"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="left_wheel" />
+    <axis
+      xyz="0 1 0" />
+    <limit
+      effort="20"
+      velocity="30" />
+    <dynamics
+      damping="0.1"
+      friction="0.2" />
+  </joint>
+  <link
+    name="right_wheel">
+    <inertial>
+      <origin
+        xyz="0.000186897669876618 0.0253615400637088 -0.000184809864538615"
+        rpy="0 0 0" />
+      <mass
+        value="0.585665991952566" />
+      <inertia
+        ixx="0.000928527905827836"
+        ixy="-1.96980205741672E-10"
+        ixz="-1.51100007177081E-08"
+        iyy="0.00168853495795271"
+        iyz="1.94752032949863E-10"
+        izz="0.000928558531615229" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/right_wheel.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/right_wheel.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="right_wheel_joint"
+    type="continuous">
+    <origin
+      xyz="-0.00018706 -0.2895 -0.16935"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="right_wheel" />
+    <axis
+      xyz="0 -1 0" />
+    <limit
+      effort="20"
+      velocity="30" />
+    <dynamics
+      damping="0.1"
+      friction="0.2" />
+  </joint>
+  <link
+    name="caster_f_l">
+    <inertial>
+      <origin
+        xyz="-0.000211217029093325 -0.00488343337310898 -0.0278047373445326"
+        rpy="0 0 0" />
+      <mass
+        value="0.0343773761631997" />
+      <inertia
+        ixx="7.07816892636274E-06"
+        ixy="1.60117057840084E-07"
+        ixz="-1.13833743869238E-08"
+        iyy="1.07770901763347E-05"
+        iyz="-2.74463122286201E-07"
+        izz="1.35458216911075E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_f_l.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_f_l.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_f_l_joint"
+    type="continuous">
+    <origin
+      xyz="0.275 0.17 -0.15478"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="caster_f_l" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="caster_wheel_f_l">
+    <inertial>
+      <origin
+        xyz="0.000260006277754798 -1.12338994395222E-05 -5.55111512312578E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.121190564506901" />
+      <inertia
+        ixx="8.85486982719961E-05"
+        ixy="-1.52127688306059E-06"
+        ixz="-1.20806832920016E-19"
+        iyy="5.34047883182945E-05"
+        iyz="1.85942777553269E-19"
+        izz="5.33390596302369E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_f_l.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_f_l.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_wheel_f_l_joint"
+    type="continuous">
+    <origin
+      xyz="0.00064749 0.014986 -0.05225"
+      rpy="0 0 0" />
+    <parent
+      link="caster_f_l" />
+    <child
+      link="caster_wheel_f_l" />
+    <axis
+      xyz="0.99907 -0.043166 0" />
+    <limit
+      effort="0"
+      velocity="30" />
+    <dynamics
+      friction="0.2" />
+  </joint>
+  <link
+    name="caster_f_r">
+    <inertial>
+      <origin
+        xyz="-2.21908344033572E-07 -0.00488799899349841 -0.0278047373438943"
+        rpy="0 0 0" />
+      <mass
+        value="0.034377376177769" />
+      <inertia
+        ixx="7.07125079899759E-06"
+        ixy="1.59066340376663E-12"
+        ixz="4.74709220715998E-10"
+        iyy="1.07840083029693E-05"
+        iyz="-2.74698674033133E-07"
+        izz="1.35458216896774E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_f_r.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_f_r.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_f_r_joint"
+    type="continuous">
+    <origin
+      xyz="0.275 -0.17 -0.15478"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="caster_f_r" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="caster_wheel_f_r">
+    <inertial>
+      <origin
+        xyz="0.000260248852002487 -2.08166817117217E-17 -5.55111512312578E-17"
+        rpy="0 0 0" />
+      <mass
+        value="0.121190564506901" />
+      <inertia
+        ixx="8.86144269600542E-05"
+        ixy="1.25769959385598E-19"
+        ixz="-1.11966583470812E-19"
+        iyy="5.33390596302359E-05"
+        iyz="-3.58784234590011E-19"
+        izz="5.33390596302365E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_f_r.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_f_r.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_wheel_f_r_joint"
+    type="continuous">
+    <origin
+      xyz="0 0.015 -0.05225"
+      rpy="0 0 0" />
+    <parent
+      link="caster_f_r" />
+    <child
+      link="caster_wheel_f_r" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      effort="0"
+      velocity="30" />
+    <dynamics
+      friction="0.2" />
+  </joint>
+  <link
+    name="caster_b_r">
+    <inertial>
+      <origin
+        xyz="-2.21909206808701E-07 -0.00488799904923643 -0.0278047373832745"
+        rpy="0 0 0" />
+      <mass
+        value="0.0343773762451283" />
+      <inertia
+        ixx="7.07125079999909E-06"
+        ixy="1.59079082659352E-12"
+        ixz="4.74709238887088E-10"
+        iyy="1.07840083034564E-05"
+        iyz="-2.74698674016186E-07"
+        izz="1.35458216910767E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_b_r.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_b_r.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_b_r_joint"
+    type="continuous">
+    <origin
+      xyz="-0.275 -0.17 -0.15478"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="caster_b_r" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="caster_wheel_b_r">
+    <inertial>
+      <origin
+        xyz="0.000260248852002418 -2.77555756156289E-17 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.121190564506901" />
+      <inertia
+        ixx="8.86144269600547E-05"
+        ixy="1.24136366723561E-19"
+        ixz="-1.24445298405647E-19"
+        iyy="5.3339059630236E-05"
+        iyz="1.76755868611897E-19"
+        izz="5.33390596302369E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_b_r.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_b_r.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_wheel_b_r_joint"
+    type="continuous">
+    <origin
+      xyz="0 0.015 -0.05225"
+      rpy="0 0 0" />
+    <parent
+      link="caster_b_r" />
+    <child
+      link="caster_wheel_b_r" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      effort="0"
+      velocity="30" />
+    <dynamics
+      friction="0.2" />
+  </joint>
+  <link
+    name="caster_b_l">
+    <inertial>
+      <origin
+        xyz="-0.000504007629840188 -0.00486194519645511 -0.0278047373888992"
+        rpy="0 0 0" />
+      <mass
+        value="0.0343773762339354" />
+      <inertia
+        ixx="7.11069032397272E-06"
+        ixy="3.80623065539692E-07"
+        ixz="-2.78399345059836E-08"
+        iyy="1.07445687795745E-05"
+        iyz="-2.73284695045809E-07"
+        izz="1.35458216922227E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_b_l.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_b_l.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_b_l_joint"
+    type="continuous">
+    <origin
+      xyz="-0.275000000000001 0.169999999999999 -0.154782629740985"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="caster_b_l" />
+    <axis
+      xyz="0 0 1" />
+  </joint>
+  <link
+    name="caster_wheel_b_l">
+    <inertial>
+      <origin
+        xyz="0.000258862899684381 -2.68228286273153E-05 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.121190564506901" />
+      <inertia
+        ixx="8.82397102592137E-05"
+        ixy="-3.61633193455675E-06"
+        ixz="-1.0319517758726E-19"
+        iyy="5.37137763310779E-05"
+        iyz="1.7418729813812E-19"
+        izz="5.3339059630236E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_b_l.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://AMR-ROS-DG/meshes/caster_wheel_b_l.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="caster_wheel_b_l_joint"
+    type="continuous">
+    <origin
+      xyz="0.001546 0.01492 -0.05225"
+      rpy="0 0 0" />
+    <parent
+      link="caster_b_l" />
+    <child
+      link="caster_wheel_b_l" />
+    <axis
+      xyz="0.99467 -0.10307 0" />
+    <limit
+      effort="0"
+      velocity="30" />
+    <dynamics
+      friction="0.2" />
+  </joint>
+</robot>

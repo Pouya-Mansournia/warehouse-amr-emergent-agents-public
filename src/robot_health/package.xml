@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>robot_health</name>
+  <version>0.1.0</version>
+  <description>
+    Phase 2 research instrumentation: per-robot operational-health publisher
+    (health_monitor) and fault injection (fault_injector) for the
+    warehouse-amr-emergent-agents fleet. Publishes structured health state;
+    does not act on it or on injected faults itself - that is the coordination
+    layer's responsibility.
+  </description>
+  <maintainer email="p.mansournia@gmail.com">Pouya Mansournia</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>amr_interfaces</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

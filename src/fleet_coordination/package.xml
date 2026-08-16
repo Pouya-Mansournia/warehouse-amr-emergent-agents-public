@@ -1,0 +1,34 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>fleet_coordination</name>
+  <version>0.1.0</version>
+  <description>
+    Phase 5 (Mode C): deterministic decentralized peer-to-peer station-claiming
+    coordination, no LLM. One decentralized_agent process per robot; the only
+    channel between robots is the shared /fleet/agent/claim topic - no central
+    broker or in-process shared state (contrast amr_ros_dg/fleet_manager.py's
+    single-node centralized mode).
+  </description>
+  <maintainer email="p.mansournia@gmail.com">Pouya Mansournia</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>amr_interfaces</exec_depend>
+  <exec_depend>agent_core</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

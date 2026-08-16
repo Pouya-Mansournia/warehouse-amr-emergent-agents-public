@@ -1,0 +1,412 @@
+<?xml version="1.0" ?>
+<!-- 15x20m warehouse fleet-simulation world for fleet.launch.py (multi-robot SLAM+Nav2).
+     Plugin list, light, and ground-plane pattern copied verbatim from worlds/amr_test_world.sdf
+     (see that file header comment for why the Sensors system + ogre2 render engine are
+     required - the lidar/camera/ultrasonic sensor elements on every robot need it, same
+     reasoning applies here, just at fleet scale).
+     Resized from the original 50x50m spec down to 15m (x, input-to-output span) by
+     20m (y, wall length) for lighter-weight fleet testing (fewer stations, shorter
+     Nav2 routes, cheaper SLAM maps) - station spacing rule (2m apart) is unchanged, this
+     footprint just yields fewer stations per side (10 each) than the 50x50m version (25
+     each). Scale back up later by regenerating with larger width_x/length_y. -->
+<sdf version="1.9">
+  <world name="warehouse_fleet_world">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system" name="gz::sim::systems::Physics" />
+    <plugin filename="gz-sim-user-commands-system" name="gz::sim::systems::UserCommands" />
+    <plugin filename="gz-sim-scene-broadcaster-system" name="gz::sim::systems::SceneBroadcaster" />
+    <plugin filename="gz-sim-contact-system" name="gz::sim::systems::Contact" />
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>15.0 20.0</size>
+            </plane>
+          </geometry>
+          <surface>
+            <friction>
+              <ode>
+                <mu>1.0</mu>
+                <mu2>1.0</mu2>
+              </ode>
+            </friction>
+          </surface>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>15.0 20.0</size>
+            </plane>
+          </geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- perimeter walls: 0.2m thick, 2m tall boxes at x=+/-7.5, y=+/-10.0 -->
+    <model name="warehouse_wall_north">
+      <static>true</static>
+      <pose>0 10.0 1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>15.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>15.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="warehouse_wall_south">
+      <static>true</static>
+      <pose>0 -10.0 1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>15.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>15.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- east wall behind output stations -->
+    <model name="warehouse_wall_east">
+      <static>true</static>
+      <pose>7.5 0 1 0 0 1.5707963</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>20.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>20.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- west wall behind input stations -->
+    <model name="warehouse_wall_west">
+      <static>true</static>
+      <pose>-7.5 0 1 0 0 1.5707963</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>20.2 0.2 2.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>20.2 0.2 2.0</size></box></geometry>
+          <material>
+            <ambient>0.55 0.55 0.58 1</ambient>
+            <diffuse>0.55 0.55 0.58 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- input stations near west wall, x=-6.9, y=-9..9 step 2 -> 10 stations
+         Names/coordinates must stay in sync with STATIONS in scripts/fleet_manager.py -->
+    <model name="input_station_1">
+      <static>true</static>
+      <pose>-6.9 -9 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_2">
+      <static>true</static>
+      <pose>-6.9 -7 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_3">
+      <static>true</static>
+      <pose>-6.9 -5 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_4">
+      <static>true</static>
+      <pose>-6.9 -3 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_5">
+      <static>true</static>
+      <pose>-6.9 -1 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_6">
+      <static>true</static>
+      <pose>-6.9 1 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_7">
+      <static>true</static>
+      <pose>-6.9 3 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_8">
+      <static>true</static>
+      <pose>-6.9 5 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_9">
+      <static>true</static>
+      <pose>-6.9 7 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="input_station_10">
+      <static>true</static>
+      <pose>-6.9 9 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.05 0.75 0.15 1</ambient>
+            <diffuse>0.05 0.75 0.15 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- output stations near east wall, x=6.9, same y spacing -->
+    <model name="output_station_1">
+      <static>true</static>
+      <pose>6.9 -9 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_2">
+      <static>true</static>
+      <pose>6.9 -7 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_3">
+      <static>true</static>
+      <pose>6.9 -5 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_4">
+      <static>true</static>
+      <pose>6.9 -3 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_5">
+      <static>true</static>
+      <pose>6.9 -1 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_6">
+      <static>true</static>
+      <pose>6.9 1 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_7">
+      <static>true</static>
+      <pose>6.9 3 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_8">
+      <static>true</static>
+      <pose>6.9 5 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_9">
+      <static>true</static>
+      <pose>6.9 7 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+    <model name="output_station_10">
+      <static>true</static>
+      <pose>6.9 9 0.01 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>1.0 1.0 0.02</size></box></geometry>
+          <material>
+            <ambient>0.85 0.30 0.05 1</ambient>
+            <diffuse>0.85 0.30 0.05 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

@@ -1,0 +1,53 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>amr_ros_dg</name>
+  <version>1.0.0</version>
+  <description>
+    ROS 2 robot-description package for amr_ros_dg (2-wheel differential-drive AMR
+    with 4 free-swiveling caster wheels). Migrated from the SolidWorks-to-URDF
+    catkin export; original ROS 1 files are kept under legacy/ for reference.
+  </description>
+  <maintainer email="p.mansournia@gmail.com">Pouya Mansournia</maintainer>
+  <license>BSD</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher</exec_depend>
+  <exec_depend>joint_state_publisher_gui</exec_depend>
+  <exec_depend>rviz2</exec_depend>
+  <exec_depend>xacro</exec_depend>
+  <exec_depend>launch</exec_depend>
+  <exec_depend>launch_ros</exec_depend>
+
+  <!-- Gazebo simulation / ros2_control phase -->
+  <exec_depend>ros_gz_sim</exec_depend>
+  <exec_depend>ros_gz_bridge</exec_depend>
+  <exec_depend>gz_ros2_control</exec_depend>
+  <exec_depend>controller_manager</exec_depend>
+  <exec_depend>joint_state_broadcaster</exec_depend>
+  <exec_depend>diff_drive_controller</exec_depend>
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+
+  <!-- Multi-robot warehouse fleet simulation (launch/fleet.launch.py, scripts/fleet_manager.py):
+       each robot runs its own SLAM Toolbox + Nav2 stack, namespaced. -->
+  <exec_depend>slam_toolbox</exec_depend>
+  <exec_depend>nav2_bringup</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>nav2_common</exec_depend>
+  <exec_depend>lifecycle_msgs</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>fleet_coordination</exec_depend>
+
+  <!-- Web control dashboard (scripts/web_dashboard.py) -->
+  <exec_depend>python3-flask</exec_depend>
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

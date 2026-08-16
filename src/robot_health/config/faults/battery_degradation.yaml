@@ -1,0 +1,19 @@
+# Controlled battery-degradation experiment. robot1's discharge rate is
+# multiplied (ACCELERATED_BATTERY_DISCHARGE,
+# severity 1.0 -> discharge_rate_multiplier *= 5.0, see robot_health/faults.py)
+# starting shortly after task contention begins, held active for the rest of the
+# run (duration_sec: 0.0 = until explicitly cleared, i.e. for the whole run here).
+# t_offset_sec is measured from fault_injector node startup.
+#
+# Used with --coordination decentralized so RuleAgent/HybridAgent/LLMAgent cost
+# scoring (which includes energy_risk, sourced from this same health signal once
+# a live Observation reads it) has a real, non-zero degradation signal to react
+# to, and summarize_run.py's degradation_summary block can measure whether
+# workload actually shifts away from the degraded robot.
+
+schedule:
+  - t_offset_sec: 5.0
+    robot_id: robot1
+    fault_type: ACCELERATED_BATTERY_DISCHARGE
+    severity: 1.0
+    duration_sec: 0.0

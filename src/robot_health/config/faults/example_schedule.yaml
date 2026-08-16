@@ -1,0 +1,29 @@
+# Example fault schedule for `ros2 run robot_health fault_injector --ros-args -p schedule_file:=<this file>`
+# t_offset_sec is measured from fault_injector node startup, not from simulation/mission start.
+
+schedule:
+  - t_offset_sec: 30.0
+    robot_id: robot1
+    fault_type: LOW_BATTERY
+    severity: 0.8
+    duration_sec: 60.0
+
+  - t_offset_sec: 60.0
+    robot_id: robot2
+    fault_type: LIDAR_NOISE
+    severity: 0.6
+    duration_sec: 45.0
+
+  - t_offset_sec: 90.0
+    robot_id: robot3
+    fault_type: WHEEL_EFFICIENCY_REDUCTION
+    severity: 0.5
+    duration_sec: 0.0  # 0 = until explicitly cleared
+
+random:
+  seed: 42
+  rate_per_min: 1.0
+  robots: [robot1, robot2, robot3]
+  fault_types: [IMU_DRIFT, ULTRASONIC_FALSE_POSITIVES, CAMERA_DROPOUT]
+  severity_range: [0.3, 0.8]
+  duration_range_sec: [15.0, 60.0]

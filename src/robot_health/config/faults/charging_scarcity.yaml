@@ -1,0 +1,23 @@
+# Charging-scarcity experiment: forces BOTH robots'
+# battery critically low via short LOW_BATTERY pulses (duration_sec=3.0, not 0 - the
+# pulse expires on its own rather than staying active forever, since an active
+# LOW_BATTERY fault re-clamps battery_soc down every health_monitor tick and would
+# otherwise permanently fight decentralized_agent's own CHARGING_BOOST fault, which
+# only the robot itself controls once it starts charging). After the pulse expires,
+# battery_soc stays at the crashed value (nothing raises it except charging) - both
+# robots should independently conclude they're critical and contend for the single
+# charger ('charger_1', see decentralized_agent.py), creating real scarcity.
+# t_offset_sec is measured from fault_injector node startup, not simulation time.
+
+schedule:
+  - t_offset_sec: 5.0
+    robot_id: robot1
+    fault_type: LOW_BATTERY
+    severity: 0.9
+    duration_sec: 3.0
+
+  - t_offset_sec: 6.0
+    robot_id: robot2
+    fault_type: LOW_BATTERY
+    severity: 0.9
+    duration_sec: 3.0

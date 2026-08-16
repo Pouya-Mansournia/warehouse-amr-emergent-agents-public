@@ -1,0 +1,14 @@
+# Phase 8 live-validation schedule: forces robot1's battery low well after it should be
+# mid-navigation to its first claimed station (agents start ~20s post-launch, and prior
+# live runs show first contention resolving/navigation starting ~60-95s into the full
+# run - t_offset_sec=75 gives comfortable margin), to trigger a real peer-to-peer
+# task-transfer negotiation (decentralized_agent.py's LOW_BATTERY_THRESHOLD=0.25).
+# severity=0.9 forces battery_soc to ~0.065 (well under the threshold);
+# duration_sec=0 keeps it low until the run ends (no need to test recovery here).
+
+schedule:
+  - t_offset_sec: 75.0
+    robot_id: robot1
+    fault_type: LOW_BATTERY
+    severity: 0.9
+    duration_sec: 0.0

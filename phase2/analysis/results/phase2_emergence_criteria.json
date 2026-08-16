@@ -1,0 +1,217 @@
+{
+  "long_distance_specialist": {
+    "pattern_name": "role:long_distance_specialist",
+    "verdict": "not_established",
+    "criteria": {
+      "1_not_explicitly_programmed": {
+        "supported": true,
+        "reasoning": "world/world.py contains no role/preference/convention assignment anywhere in its tick loop - roles/preferences/conventions exist only as this analysis package's post-hoc labels, verifiable by reading world/world.py directly."
+      },
+      "2_arises_from_repeated_local_interactions": {
+        "supported": true,
+        "reasoning": "every input to this pattern (claims, negotiations, charger events) is a real per-tick local decision by RuleAgent/LLMAgent/HybridAgent/ClaimBook/Conversation - no global scheduler exists in this world."
+      },
+      "3_measurable_fleet_level_pattern": {
+        "supported": true,
+        "mean_persistence_ratio": 0.44,
+        "uniform_baseline": 0.25,
+        "reasoning": "mean persistence ratio 0.44 vs uniform-random baseline 0.25 (margin 0.15)."
+      },
+      "4_persists_meaningful_duration": {
+        "supported": true,
+        "mean_longest_streak_windows": 2.4,
+        "reasoning": "mean longest consecutive-window streak 2.4 (threshold 2 windows)."
+      },
+      "5_multiple_independent_runs": {
+        "supported": true,
+        "seed_coverage": 1.0,
+        "seeds_above_baseline": 5,
+        "total_seeds": 5,
+        "reasoning": "5/5 seeds independently show this pattern above baseline (threshold 0.6)."
+      },
+      "6_frequency_above_baseline": {
+        "supported": true,
+        "reasoning": "same computation as criterion 3 - both ask whether the observed rate exceeds what a uniform/random null model predicts."
+      },
+      "7_not_trivially_a_tie_break_artifact": {
+        "supported": false,
+        "memory_on_mean": 0.44,
+        "memory_off_mean": 0.46,
+        "memory_effect": -0.02,
+        "reasoning": "memory ON mean (0.44) minus memory OFF mean (0.46) = -0.02 (threshold 0.1) - if the pattern is just as strong without memory, it is more likely explained by the deterministic cost formula alone, not a genuinely emergent, history-dependent convention."
+      }
+    }
+  },
+  "local_task_specialist": {
+    "pattern_name": "role:local_task_specialist",
+    "verdict": "not_established",
+    "criteria": {
+      "1_not_explicitly_programmed": {
+        "supported": true,
+        "reasoning": "world/world.py contains no role/preference/convention assignment anywhere in its tick loop - roles/preferences/conventions exist only as this analysis package's post-hoc labels, verifiable by reading world/world.py directly."
+      },
+      "2_arises_from_repeated_local_interactions": {
+        "supported": true,
+        "reasoning": "every input to this pattern (claims, negotiations, charger events) is a real per-tick local decision by RuleAgent/LLMAgent/HybridAgent/ClaimBook/Conversation - no global scheduler exists in this world."
+      },
+      "3_measurable_fleet_level_pattern": {
+        "supported": true,
+        "mean_persistence_ratio": 0.48,
+        "uniform_baseline": 0.25,
+        "reasoning": "mean persistence ratio 0.48 vs uniform-random baseline 0.25 (margin 0.15)."
+      },
+      "4_persists_meaningful_duration": {
+        "supported": true,
+        "mean_longest_streak_windows": 2.8,
+        "reasoning": "mean longest consecutive-window streak 2.8 (threshold 2 windows)."
+      },
+      "5_multiple_independent_runs": {
+        "supported": true,
+        "seed_coverage": 1.0,
+        "seeds_above_baseline": 5,
+        "total_seeds": 5,
+        "reasoning": "5/5 seeds independently show this pattern above baseline (threshold 0.6)."
+      },
+      "6_frequency_above_baseline": {
+        "supported": true,
+        "reasoning": "same computation as criterion 3 - both ask whether the observed rate exceeds what a uniform/random null model predicts."
+      },
+      "7_not_trivially_a_tie_break_artifact": {
+        "supported": false,
+        "memory_on_mean": 0.48,
+        "memory_off_mean": 0.44,
+        "memory_effect": 0.04,
+        "reasoning": "memory ON mean (0.48) minus memory OFF mean (0.44) = 0.04 (threshold 0.1) - if the pattern is just as strong without memory, it is more likely explained by the deterministic cost formula alone, not a genuinely emergent, history-dependent convention."
+      }
+    }
+  },
+  "high_utilization_worker": {
+    "pattern_name": "role:high_utilization_worker",
+    "verdict": "candidate_emergent_collective_behavior",
+    "criteria": {
+      "1_not_explicitly_programmed": {
+        "supported": true,
+        "reasoning": "world/world.py contains no role/preference/convention assignment anywhere in its tick loop - roles/preferences/conventions exist only as this analysis package's post-hoc labels, verifiable by reading world/world.py directly."
+      },
+      "2_arises_from_repeated_local_interactions": {
+        "supported": true,
+        "reasoning": "every input to this pattern (claims, negotiations, charger events) is a real per-tick local decision by RuleAgent/LLMAgent/HybridAgent/ClaimBook/Conversation - no global scheduler exists in this world."
+      },
+      "3_measurable_fleet_level_pattern": {
+        "supported": true,
+        "mean_persistence_ratio": 0.64,
+        "uniform_baseline": 0.25,
+        "reasoning": "mean persistence ratio 0.64 vs uniform-random baseline 0.25 (margin 0.15)."
+      },
+      "4_persists_meaningful_duration": {
+        "supported": true,
+        "mean_longest_streak_windows": 3.2,
+        "reasoning": "mean longest consecutive-window streak 3.2 (threshold 2 windows)."
+      },
+      "5_multiple_independent_runs": {
+        "supported": true,
+        "seed_coverage": 1.0,
+        "seeds_above_baseline": 5,
+        "total_seeds": 5,
+        "reasoning": "5/5 seeds independently show this pattern above baseline (threshold 0.6)."
+      },
+      "6_frequency_above_baseline": {
+        "supported": true,
+        "reasoning": "same computation as criterion 3 - both ask whether the observed rate exceeds what a uniform/random null model predicts."
+      },
+      "7_not_trivially_a_tie_break_artifact": {
+        "supported": true,
+        "memory_on_mean": 0.64,
+        "memory_off_mean": 0.52,
+        "memory_effect": 0.12,
+        "reasoning": "memory ON mean (0.64) minus memory OFF mean (0.52) = 0.12 (threshold 0.1) - if the pattern is just as strong without memory, it is more likely explained by the deterministic cost formula alone, not a genuinely emergent, history-dependent convention."
+      }
+    }
+  },
+  "helper": {
+    "pattern_name": "role:helper",
+    "verdict": "not_established",
+    "criteria": {
+      "1_not_explicitly_programmed": {
+        "supported": true,
+        "reasoning": "world/world.py contains no role/preference/convention assignment anywhere in its tick loop - roles/preferences/conventions exist only as this analysis package's post-hoc labels, verifiable by reading world/world.py directly."
+      },
+      "2_arises_from_repeated_local_interactions": {
+        "supported": true,
+        "reasoning": "every input to this pattern (claims, negotiations, charger events) is a real per-tick local decision by RuleAgent/LLMAgent/HybridAgent/ClaimBook/Conversation - no global scheduler exists in this world."
+      },
+      "3_measurable_fleet_level_pattern": {
+        "supported": true,
+        "mean_persistence_ratio": 1.0,
+        "uniform_baseline": 0.25,
+        "reasoning": "mean persistence ratio 1.0 vs uniform-random baseline 0.25 (margin 0.15)."
+      },
+      "4_persists_meaningful_duration": {
+        "supported": false,
+        "mean_longest_streak_windows": 1.0,
+        "reasoning": "mean longest consecutive-window streak 1.0 (threshold 2 windows)."
+      },
+      "5_multiple_independent_runs": {
+        "supported": true,
+        "seed_coverage": 1.0,
+        "seeds_above_baseline": 1,
+        "total_seeds": 1,
+        "reasoning": "1/1 seeds independently show this pattern above baseline (threshold 0.6)."
+      },
+      "6_frequency_above_baseline": {
+        "supported": true,
+        "reasoning": "same computation as criterion 3 - both ask whether the observed rate exceeds what a uniform/random null model predicts."
+      },
+      "7_not_trivially_a_tie_break_artifact": {
+        "supported": false,
+        "memory_on_mean": 1.0,
+        "memory_off_mean": 1.0,
+        "memory_effect": 0.0,
+        "reasoning": "memory ON mean (1.0) minus memory OFF mean (1.0) = 0.0 (threshold 0.1) - if the pattern is just as strong without memory, it is more likely explained by the deterministic cost formula alone, not a genuinely emergent, history-dependent convention."
+      }
+    }
+  },
+  "peer_preference_concentration": {
+    "pattern_name": "peer_preference_concentration",
+    "verdict": "not_established",
+    "criteria": {
+      "1_not_explicitly_programmed": {
+        "supported": true,
+        "reasoning": "world/world.py contains no role/preference/convention assignment anywhere in its tick loop - roles/preferences/conventions exist only as this analysis package's post-hoc labels, verifiable by reading world/world.py directly."
+      },
+      "2_arises_from_repeated_local_interactions": {
+        "supported": true,
+        "reasoning": "every input to this pattern (claims, negotiations, charger events) is a real per-tick local decision by RuleAgent/LLMAgent/HybridAgent/ClaimBook/Conversation - no global scheduler exists in this world."
+      },
+      "3_measurable_fleet_level_pattern": {
+        "supported": true,
+        "mean_persistence_ratio": 1.0,
+        "uniform_baseline": 0.25,
+        "reasoning": "mean persistence ratio 1.0 vs uniform-random baseline 0.25 (margin 0.15)."
+      },
+      "4_persists_meaningful_duration": {
+        "supported": true,
+        "mean_longest_streak_windows": 2.0,
+        "reasoning": "mean longest consecutive-window streak 2.0 (threshold 2 windows)."
+      },
+      "5_multiple_independent_runs": {
+        "supported": true,
+        "seed_coverage": 1.0,
+        "seeds_above_baseline": 1,
+        "total_seeds": 1,
+        "reasoning": "1/1 seeds independently show this pattern above baseline (threshold 0.6)."
+      },
+      "6_frequency_above_baseline": {
+        "supported": true,
+        "reasoning": "same computation as criterion 3 - both ask whether the observed rate exceeds what a uniform/random null model predicts."
+      },
+      "7_not_trivially_a_tie_break_artifact": {
+        "supported": false,
+        "memory_on_mean": 1.0,
+        "memory_off_mean": 1.0,
+        "memory_effect": 0.0,
+        "reasoning": "memory ON mean (1.0) minus memory OFF mean (1.0) = 0.0 (threshold 0.1) - if the pattern is just as strong without memory, it is more likely explained by the deterministic cost formula alone, not a genuinely emergent, history-dependent convention."
+      }
+    }
+  }
+}

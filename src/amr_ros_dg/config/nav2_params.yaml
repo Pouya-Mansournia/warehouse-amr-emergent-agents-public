@@ -1,0 +1,387 @@
+# Nav2 params for the warehouse fleet simulation (launch/fleet.launch.py).
+#
+# ONE shared file, included once per robot namespace by nav2_bringup's navigation_launch.py
+# (not bringup_launch.py - see fleet.launch.py's comment on why: SLAM Toolbox provides the
+# map, so map_server/amcl are not used here, "navigation_launch.py" is nav2_bringup's
+# minimal include that skips those).
+#
+# frame_ids below are left as plain "map"/"odom"/"base_link" - NOT prefixed with
+# "robot1_" etc. This is intentional: fleet.launch.py runs every Nav2 node inside a ROS
+# namespace (robot1, robot2, ...), and namespacing already isolates each robot's /tf onto
+# its own "/robotN/tf" topic (see fleet.launch.py's TF design comment, and the matching
+# comment at the top of urdf/amr_ros_dg.urdf.xacro). Plain frame_ids are what Nav2/SLAM
+# Toolbox expect by default inside a namespace - this is the standard, documented
+# multi-robot Nav2 pattern (as used by the turtlebot3 multi-robot demo).
+#
+# planner: NavFn (as-is, no extra tuning) satisfies the "fastest route" requirement per spec
+# - SmacPlanner2D would also work but NavFn is the simpler/lower-config default.
+#
+# velocity_smoother: max_accel is set LOW relative to max_velocity on purpose, so the
+# spec'd "slow accel start, faster mid-route, decel/stop at end" motion profile is visibly
+# a ramp rather than an instant jump to cruise speed - this is configuration only, not a
+# hand-rolled trapezoidal controller, per spec.
+
+controller_server:
+  ros__parameters:
+    # diff_drive_controller (confirmed earlier in this repo's single-robot debugging, see
+    # config/amr_ros_dg_controllers.yaml's use_stamped_vel comment) only ever subscribes
+    # with geometry_msgs/TwistStamped on ROS 2 Jazzy, regardless of its own use_stamped_vel
+    # flag. Nav2's cmd_vel chain (controller_server -> velocity_smoother -> collision_monitor
+    # -> diff_drive_controller) defaults to plain Twist end-to-end unless every stage in the
+    # chain has enable_stamped_cmd_vel set - confirmed live in WSL via
+    # `ros2 topic info /robot1/diff_drive_controller/cmd_vel -v`: collision_monitor was
+    # publishing Twist while diff_drive_controller subscribed TwistStamped, same topic name,
+    # zero effective connection (this exact Twist-vs-TwistStamped mismatch was ALSO the
+    # very first bug found in this whole project, months earlier, on the single-robot
+    # teleop path - it just resurfaced here in a different part of the pipeline). All three
+    # nodes that touch cmd_vel in this file need the flag, not just collision_monitor.
+    enable_stamped_cmd_vel: true
+    # 20 -> 10Hz: halves controller_server's per-cycle compute cost per robot - with several
+    # robots' Nav2 stacks running at once on WSL2, this was a real contributor to the whole
+    # fleet crawling (see the global_costmap resolution comment below for the other one).
+    # 10Hz is still comfortably above what a 2 m/s robot needs for smooth control.
+    controller_frequency: 10.0
+    min_x_velocity_threshold: 0.001
+    min_y_velocity_threshold: 0.5
+    min_theta_velocity_threshold: 0.001
+    failure_tolerance: 0.3
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["goal_checker"]
+    controller_plugins: ["FollowPath"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.5
+      movement_time_allowance: 10.0
+
+    goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.25
+      yaw_goal_tolerance: 0.25
+      stateful: true
+
+    # DWB, the standard default local trajectory controller in nav2_bringup's reference
+    # params - reused as-is (no custom controller), matching the "use Nav2 as-is" spec.
+    FollowPath:
+      plugin: "dwb_core::DWBLocalPlanner"
+      debug_trajectory_details: false
+      min_vel_x: 0.0
+      min_vel_y: 0.0
+      # Doubled from the original 1.0/0.4/0.8 defaults per explicit request - matched by the
+      # same 2x on velocity_smoother below and on diff_drive_controller's own SpeedLimiter in
+      # config/amr_ros_dg_controllers.yaml (that one is the actual final ceiling; raising it
+      # here alone would just get clamped back down there otherwise).
+      max_vel_x: 2.0
+      max_vel_y: 0.0
+      max_vel_theta: 2.0
+      min_speed_xy: 0.0
+      max_speed_xy: 2.0
+      min_speed_theta: 0.0
+      # acc/decel limits here match velocity_smoother below - low relative to max_vel_x so
+      # the visible ramp isn't undone by the local controller allowing a faster local ramp.
+      acc_lim_x: 0.8
+      acc_lim_y: 0.0
+      acc_lim_theta: 1.6
+      decel_lim_x: -0.8
+      decel_lim_y: 0.0
+      decel_lim_theta: -1.6
+      vx_samples: 20
+      vy_samples: 1
+      vtheta_samples: 20
+      sim_time: 1.7
+      linear_granularity: 0.05
+      angular_granularity: 0.025
+      transform_tolerance: 0.2
+      xy_goal_tolerance: 0.25
+      trans_stopped_velocity: 0.25
+      short_circuit_trajectory_evaluation: true
+      stateful: true
+      # single-line flow list - a multi-line bracket form here previously produced "No
+      # critics defined for FollowPath" at controller_server startup (SIGABRT), even though
+      # it's valid YAML and PyYAML parses it fine; the params-file loader ROS 2 nodes use
+      # (yaml-cpp, via rclcpp) apparently doesn't like it - single-line matches nav2_bringup's
+      # own default params.yaml exactly and is confirmed to load correctly.
+      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
+      BaseObstacle.scale: 0.02
+      PathAlign.scale: 32.0
+      GoalAlign.scale: 24.0
+      PathDist.scale: 32.0
+      GoalDist.scale: 24.0
+      RotateToGoal.scale: 32.0
+      RotateToGoal.slowing_factor: 5.0
+      RotateToGoal.lookahead_time: -1.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      # 5.0/2.0 -> 3.0/1.0: same reasoning as controller_frequency above - cuts per-robot
+      # CPU cost, still plenty responsive for a 2 m/s robot with a 6x6m local costmap.
+      update_frequency: 3.0
+      publish_frequency: 1.0
+      global_frame: odom
+      robot_base_frame: base_link
+      use_sim_time: true
+      rolling_window: true
+      width: 6
+      height: 6
+      resolution: 0.05
+      # obstacle layer fed by THIS robot's own lidar only (topic "scan", remapped by
+      # fleet.launch.py to "/robotN/scan") - satisfies the spec's no-collision requirement
+      # without any centralized/multi-agent planning.
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.2
+        z_voxels: 10
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: scan
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 11.5
+          obstacle_min_range: 0.0
+      always_send_full_costmap: true
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      update_frequency: 1.0
+      publish_frequency: 1.0
+      global_frame: map
+      robot_base_frame: base_link
+      use_sim_time: true
+      # No static map layer/map_server - SLAM Toolbox (per robot) supplies "map" via TF +
+      # the /map topic directly, per the spec ("full SLAM Toolbox... not a shared map").
+      #
+      # rolling_window/width/height/resolution added after a real failure confirmed live in
+      # WSL: without a static_layer AND without these, an unsized global_costmap defaults to
+      # a tiny area that does not include the robot's own start position, so
+      # NavfnPlanner immediately aborted every single goal with "Start Coordinates of
+      # (-0.000000, -0.000000) was outside bounds" (and nav2_costmap_2d separately logged
+      # "Robot is out of bounds of the costmap" on a timer the whole time). Using the same
+      # rolling_window approach as local_costmap - centered on the robot rather than a
+      # static map-sized region - sidesteps needing a static_layer at all (which would in
+      # turn need slam_toolbox's /map topic namespaced, a separate unresolved issue - see
+      # fleet.launch.py's slam_toolbox_node comment on /map being published unnamespaced).
+      # width/height raised 25 -> 60 (half-width 12.5m -> 30m) to fix "Goal Coordinates ...
+      # was outside bounds" - the old 12.5m half-width was smaller than the worst-case
+      # station-to-station distance (~13.65m). But at the old resolution (0.05), 60m width
+      # is 1200x1200 = 1.44M cells PER ROBOT, ~5.8x the original 25m/0.05 (500x500=250k) -
+      # with multiple robots' costmaps updating every cycle this saturated WSL2's CPU and
+      # made every robot crawl (confirmed live: barely moved in 2 minutes at num_robots:=3).
+      # resolution coarsened 0.05 -> 0.1 to compensate: 60m/0.1 = 600x600 = 360k cells, back
+      # in the same ballpark as the original per-robot cost while keeping full coverage.
+      rolling_window: true
+      width: 60
+      height: 60
+      resolution: 0.1
+      plugins: ["voxel_layer", "inflation_layer"]
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        cost_scaling_factor: 3.0
+        inflation_radius: 0.55
+      voxel_layer:
+        plugin: "nav2_costmap_2d::VoxelLayer"
+        enabled: true
+        publish_voxel_map: false
+        origin_z: 0.0
+        z_resolution: 0.2
+        z_voxels: 10
+        max_obstacle_height: 2.0
+        mark_threshold: 0
+        observation_sources: scan
+        scan:
+          topic: scan
+          max_obstacle_height: 2.0
+          clearing: true
+          marking: true
+          data_type: "LaserScan"
+          raytrace_max_range: 12.0
+          raytrace_min_range: 0.0
+          obstacle_max_range: 11.5
+          obstacle_min_range: 0.0
+      always_send_full_costmap: true
+
+planner_server:
+  ros__parameters:
+    expected_planner_frequency: 5.0
+    use_sim_time: true
+    planner_plugins: ["GridBased"]
+    GridBased:
+      # NavFn as-is, no extra tuning - "fastest-route" requirement satisfied by using
+      # Nav2's planner unmodified, per spec.
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: false
+      allow_unknown: true
+
+# nav2_bringup's navigation_launch.py hardcodes collision_monitor (and docking_server, see
+# below) into its lifecycle node list unconditionally - with no section for a node here,
+# lifecycle_manager aborts Nav2 bringup entirely for every robot. Values below are nav2_
+# bringup's OWN default params.yaml collision_monitor section (found via
+# `find /opt/ros -name nav2_params.yaml -path "*nav2_bringup*"`), not invented from scratch -
+# empty polygons/observation_sources lists turned out to SIGABRT the node outright
+# ("parameter_value_from failed ... No parameter value set" - apparently an empty YAML list
+# has no inferrable element type for the C++ param loader), so a real, functioning single-
+# polygon/single-source config was the actually-reliable fix, not a trimmed-down one.
+# base_frame_id changed from the upstream default "base_footprint" to "base_link" (this
+# robot's URDF has no base_footprint link) and footprint_topic/scan topic left RELATIVE
+# (no leading "/") so they resolve inside each robot's own namespace, matching every other
+# topic reference in this file - the upstream default's leading "/local_costmap/..." would
+# escape the namespace and point at a global topic that does not exist per-robot.
+collision_monitor:
+  ros__parameters:
+    # See controller_server's enable_stamped_cmd_vel comment - same fix, needed on every
+    # node in the cmd_vel chain.
+    enable_stamped_cmd_vel: true
+    use_sim_time: true
+    base_frame_id: "base_link"
+    odom_frame_id: "odom"
+    cmd_vel_in_topic: "cmd_vel_smoothed"
+    # NOT the collision_monitor/nav2_bringup default "cmd_vel" - diff_drive_controller (a
+    # ros2_control CONTROLLER, not a standalone launch Node) actually listens on
+    # "<controller_name>/cmd_vel" relative to its controller_manager, i.e.
+    # "diff_drive_controller/cmd_vel" (-> /robotN/diff_drive_controller/cmd_vel once
+    # namespaced) - confirmed by `ros2 topic list | grep robot1` showing exactly that
+    # topic, distinct from a dead-end plain "/robot1/cmd_vel" that nothing subscribed to.
+    # This was the LAST missing link in the whole Nav2 pipeline: goals were being accepted,
+    # planned, and executed all the way through velocity_smoother, but the final published
+    # command never reached any topic diff_drive_controller was actually listening on, so
+    # the robot never physically moved despite Nav2 reporting navigation success.
+    cmd_vel_out_topic: "diff_drive_controller/cmd_vel"
+    state_topic: "collision_monitor_state"
+    transform_tolerance: 0.2
+    source_timeout: 1.0
+    base_shift_correction: true
+    stop_pub_timeout: 2.0
+    polygons: ["FootprintApproach"]
+    FootprintApproach:
+      type: "polygon"
+      action_type: "approach"
+      footprint_topic: "local_costmap/published_footprint"
+      time_before_collision: 1.2
+      simulation_time_step: 0.1
+      min_points: 6
+      visualize: false
+      enabled: true
+    observation_sources: ["scan"]
+    scan:
+      type: "scan"
+      topic: "scan"
+      min_height: 0.15
+      max_height: 2.0
+      enabled: true
+
+# Also unconditionally in navigation_launch.py's lifecycle node list, and lifecycle_manager
+# passes its node_names list as a hardcoded Python literal (not sourced from this params
+# file), so there is no way to exclude docking_server even though this robot has no docking
+# hardware/spec requirement for it - it just has to configure() without error or
+# lifecycle_manager aborts bringup for the WHOLE robot (confirmed live in WSL: "Charging
+# dock plugins not given!" with dock_plugins absent). simple_charging_dock below is a stub
+# registration only (opennav_docking's built-in plugin, config left at its own defaults) -
+# nothing in this fleet sim ever sends a dock action, it exists purely so this lifecycle
+# node has a valid, non-empty dock_plugins list to configure with.
+docking_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 50.0
+    initial_perception_timeout: 5.0
+    wait_charge_timeout: 5.0
+    dock_approach_timeout: 30.0
+    undock_linear_tolerance: 0.05
+    undock_angular_tolerance: 0.1
+    max_retries: 3
+    base_frame: "base_link"
+    dock_plugins: ["simple_charging_dock"]
+    simple_charging_dock:
+      plugin: "opennav_docking::SimpleChargingDock"
+
+behavior_server:
+  ros__parameters:
+    costmap_topic: local_costmap/costmap_raw
+    footprint_topic: local_costmap/published_footprint
+    cycle_frequency: 10.0
+    behavior_plugins: ["spin", "backup", "wait"]
+    spin:
+      plugin: "nav2_behaviors::Spin"
+    backup:
+      plugin: "nav2_behaviors::BackUp"
+    wait:
+      plugin: "nav2_behaviors::Wait"
+    global_frame: odom
+    robot_base_frame: base_link
+    transform_timeout: 0.1
+    use_sim_time: true
+    simulate_ahead_time: 2.0
+    max_rotational_vel: 1.0
+    min_rotational_vel: 0.4
+    rotational_acc_lim: 3.2
+
+# default_nav_to_pose_bt_xml/default_nav_through_poses_bt_xml deliberately OMITTED (an
+# earlier version set them to "" (empty string) - nav2_bringup's own default params.yaml
+# does not set them at all, and bt_navigator falls back to its own compiled-in default BT
+# XML when the param is absent; an explicit empty string is a real path value, not "use the
+# default", so bt_navigator likely tried and failed to load a BT from "" - matching exactly
+# what was observed live in WSL: every NavigateToPose goal was accepted by the action server
+# but immediately rejected, in a tight reassign-retry loop from fleet_manager.py).
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+    global_frame: map
+    robot_base_frame: base_link
+    odom_topic: odom
+
+# ============================== lifecycle_manager_navigation ==============================
+# bond_timeout: 0.0 disables the ROS bond (heartbeat) each managed node normally maintains
+# with lifecycle_manager - nav2_lifecycle_manager's own default is 4.0s. Found the hard way
+# under 3-robot WSL2 load (see TROUBLESHOOTING.md #21-22c): bt_navigator successfully
+# accepted a goal and began real navigation ("Begin
+# navigating from current location..."), then ~48s later logged "[ActionServer] Aborting
+# handle... Destroying bond (bt_navigator) to lifecycle manager" and stayed permanently
+# inactive (every subsequent goal rejected with "Action server is inactive") for the rest
+# of a 300s run - bt_navigator itself never crashed or logged an error, it just couldn't
+# publish its bond heartbeat within the 4s default timeout while CPU-starved, so
+# lifecycle_manager assumed it had died and tore it down. This is the standard fix
+# recommended for constrained/simulated hosts where missing a soft real-time heartbeat
+# doesn't actually mean the node is dead - lifecycle_manager still supervises bringup/
+# shutdown either way, it just stops assuming silence under load means death.
+lifecycle_manager_navigation:
+  ros__parameters:
+    bond_timeout: 0.0
+
+# ============================== velocity_smoother ==============================
+# max_accel LOW relative to max_velocity is the entire mechanism behind the spec'd visible
+# "slow accel start, faster mid-route, decel/stop at end" motion profile - configuration
+# only, per spec ("do not hand-roll a trapezoidal controller"). Velocities/accels doubled
+# from the original 1.0 m/s / 0.3 m/s^2 per explicit request - ~3.3s to reach full speed and
+# ~3.3s to stop is preserved (both numerator and denominator doubled), just at double the
+# cruise speed, clearly visible over a multi-meter station-to-station route.
+velocity_smoother:
+  ros__parameters:
+    # See controller_server's enable_stamped_cmd_vel comment - same fix, needed on every
+    # node in the cmd_vel chain.
+    enable_stamped_cmd_vel: true
+    smoothing_frequency: 20.0
+    scale_velocities: false
+    feedback: "OPEN_LOOP"
+    max_velocity: [2.0, 0.0, 2.0]
+    min_velocity: [-2.0, 0.0, -2.0]
+    max_accel: [0.6, 0.0, 1.6]
+    max_decel: [-0.6, 0.0, -1.6]
+    odom_topic: odom
+    odom_duration: 0.1
+    deadband_velocity: [0.0, 0.0, 0.0]
+    velocity_timeout: 1.0

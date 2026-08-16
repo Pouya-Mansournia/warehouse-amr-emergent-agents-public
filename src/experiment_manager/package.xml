@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>experiment_manager</name>
+  <version>0.1.0</version>
+  <description>
+    Phase 1 research instrumentation: experiment IDs, deterministic seeds,
+    passive event logging, rosbag capture, and run summaries for the
+    warehouse-amr-emergent-agents fleet. Observes existing topics only;
+    does not modify amr_ros_dg behavior.
+  </description>
+  <maintainer email="p.mansournia@gmail.com">Pouya Mansournia</maintainer>
+  <license>BSD-3-Clause</license>
+
+  <buildtool_depend>ament_python</buildtool_depend>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>action_msgs</exec_depend>
+  <exec_depend>nav2_msgs</exec_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>rosbag2</exec_depend>
+  <exec_depend>amr_interfaces</exec_depend>
+  <exec_depend>python3-matplotlib</exec_depend>
+
+  <test_depend>ament_copyright</test_depend>
+  <test_depend>ament_flake8</test_depend>
+  <test_depend>ament_pep257</test_depend>
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

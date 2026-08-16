@@ -1,0 +1,115 @@
+# ros2_control / Gazebo Sim controller configuration for amr_ros_dg.
+#
+# wheel_separation and wheel_radius are measured from CAD, not invented:
+#   wheel_separation = 0.579 m  (left_wheel_joint y=+0.2895, right_wheel_joint y=-0.2895,
+#                                 from the SW2URDF export CSV -> 2 * 0.2895)
+#   wheel_radius      = 0.075 m (left_wheel.STL / right_wheel.STL measure 150mm diameter)
+#
+# max linear/angular speed limits below are conservative operating defaults for teleop/testing,
+# not a mechanical property of the robot - they are NOT derived from CAD and can be raised once
+# real motor performance (torque/RPM curve, gear ratio) is known.
+
+# "/**:" wildcard wrapper (not a per-node key like "controller_manager:" used to be at the
+# top level) - required so this ONE shared file works for both the unnamespaced single-robot
+# node (gazebo.launch.py -> "/controller_manager") and every namespaced fleet robot
+# (fleet.launch.py -> "/robot1/controller_manager", "/robot2/controller_manager", ...).
+# A plain top-level "controller_manager:" key only matches a node whose FULLY QUALIFIED name
+# is exactly "controller_manager" (no namespace) - once fleet.launch.py started namespacing
+# controller_manager (see urdf/amr_ros_dg.urdf.xacro's namespace_controller_manager property),
+# that stopped matching and controller_manager came up with none of these parameters loaded
+# at all (symptom: "The 'type' param was not defined for 'joint_state_broadcaster'", confirmed
+# live in WSL). "/**:" is the standard ROS 2 wildcard that matches a node under ANY namespace,
+# fixing both cases with one file - values below are identical for every robot regardless
+# (same CAD-derived wheel geometry, same tuning), so wildcarding is exactly correct here.
+/**:
+  controller_manager:
+    ros__parameters:
+      update_rate: 100 # Hz
+
+      joint_state_broadcaster:
+        type: joint_state_broadcaster/JointStateBroadcaster
+
+      diff_drive_controller:
+        type: diff_drive_controller/DiffDriveController
+
+  joint_state_broadcaster:
+    ros__parameters:
+      joints:
+        - left_wheel_joint
+        - right_wheel_joint
+        - caster_f_l_joint
+        - caster_wheel_f_l_joint
+        - caster_f_r_joint
+        - caster_wheel_f_r_joint
+        - caster_b_r_joint
+        - caster_wheel_b_r_joint
+        - caster_b_l_joint
+        - caster_wheel_b_l_joint
+
+  diff_drive_controller:
+    ros__parameters:
+      left_wheel_names: ["left_wheel_joint"]
+      right_wheel_names: ["right_wheel_joint"]
+
+      wheel_separation: 0.579
+      wheel_radius: 0.075
+
+      # SW2URDF export already includes a small per-wheel joint-origin/inertia asymmetry
+      # (real CAD tolerances) - DiffDriveController assumes a symmetric pair, so no
+      # multiplier correction is applied here.
+      wheel_separation_multiplier: 1.0
+      left_wheel_radius_multiplier: 1.0
+      right_wheel_radius_multiplier: 1.0
+
+      publish_rate: 50.0
+      odom_frame_id: odom
+      base_frame_id: base_link
+      # diff_drive_controller (Jazzy) auto-prefixes odom_frame_id/base_frame_id with the
+      # controller_manager's own namespace when tf_frame_prefix_enable is left at its
+      # default (true) - so in fleet mode it was actually publishing "robot1/odom" ->
+      # "robot1/base_link" on /robot1/tf, not plain "odom"/"base_link" as configured above
+      # and as every other file in this repo (nav2_params.yaml, slam_toolbox's params in
+      # fleet.launch.py) assumes. Nav2's local_costmap therefore could never find a frame
+      # literally named "odom" and hung forever on "Timed out waiting for transform from
+      # base_link to odom" - confirmed live in WSL via `ros2 topic echo /robot1/tf`, which
+      # showed exactly frame_id: robot1/odom / child_frame_id: robot1/base_link. Disabling
+      # this keeps frame_ids plain, matching this repo's deliberate namespace-via-topics-
+      # only design (see fleet.launch.py's and the xacro's TF design comments).
+      tf_frame_prefix_enable: false
+      pose_covariance_diagonal: [0.001, 0.001, 0.0, 0.0, 0.0, 0.01]
+      twist_covariance_diagonal: [0.001, 0.0, 0.0, 0.0, 0.0, 0.01]
+
+      open_loop: false
+      enable_odom_tf: true
+
+      cmd_vel_timeout: 0.5
+      # NOTE: confirmed via `ros2 topic info /diff_drive_controller/cmd_vel -v` that the
+      # diff_drive_controller shipped with ROS 2 Jazzy ignores this flag and always subscribes
+      # with geometry_msgs/TwistStamped - a plain Twist publisher on this topic silently has
+      # zero matching subscribers (name matches, type doesn't -> no connection, no error).
+      # scripts/wasd_teleop.py publishes TwistStamped to match. Left as `false` here for
+      # documentation purposes only; it has no effect on the actual subscription type.
+      use_stamped_vel: false
+
+      # Teleop operating limits (defaults, not CAD-derived - see header note above).
+      # Doubled again (1.5 -> 3.0 m/s) per explicit request - this is the FINAL ceiling in
+      # the whole cmd_vel chain (fleet.launch.py's Nav2 stack now tops out at 2.0 m/s, see
+      # config/nav2_params.yaml, so this just needs to stay comfortably above that, which
+      # 3.0 does). CAVEAT: at pure-linear 3.0 m/s, required wheel speed is 3.0/0.075 = 40
+      # rad/s, above the 30 rad/s command_interface limit set on the wheel joints (see
+      # urdf/amr_ros_dg.urdf.xacro's <ros2_control> block) - that limit will silently clamp
+      # (soft-saturate, not error) in the rare case something actually commands full 3.0 m/s
+      # simultaneously with a large angular component; harmless for this sim, Nav2 itself
+      # never requests above 2.0 m/s (2.0/0.075 = 26.7 rad/s, comfortably under 30) so this
+      # only matters for a manual teleop command deliberately pushed past what Nav2 uses.
+      linear.x.max_velocity: 3.0
+      linear.x.min_velocity: -3.0
+      # max_acceleration doubled alongside max_velocity (3.0 -> 6.0 m/s^2) so time-to-full-
+      # speed stays the same (~0.5s) rather than getting slower at the new higher top speed.
+      linear.x.max_acceleration: 6.0
+      linear.x.min_acceleration: -6.0
+
+      angular.z.max_velocity: 3.0
+      angular.z.min_velocity: -3.0
+      angular.z.max_acceleration: 6.0
+      angular.z.min_acceleration: -6.0

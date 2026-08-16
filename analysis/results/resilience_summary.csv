@@ -1,0 +1,5 @@
+Mode,Runs,Recovery,Recovery Time,Throughput Retention,Energy/Task,Safety,Decision Latency
+No Recovery,3,0/3,no recovery,not measured,not measured,2 events,not measured
+Deterministic,3,3/3,28.04s (±1.98),not measured,not measured,26.67 events (±8.08),0.069 (±0.032)
+LLM,3,2/3,31.14s (±7.93),not measured,not measured,32.33 events (±23.5),5567.925 (±1576.809)
+Hybrid,3,2/3,29.75s (±2.9),not measured,not measured,21.33 events (±11.59),5175.14 (±1920.83)

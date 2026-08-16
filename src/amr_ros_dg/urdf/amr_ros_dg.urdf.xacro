@@ -1,0 +1,847 @@
+<?xml version="1.0"?>
+<robot name="amr_ros_dg" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <!-- ============================== multi-robot fleet support ==============================
+       robot_name: settable per-instantiation (fleet.launch.py passes robot_name:=robot1,
+       robot2, ... when this xacro is run once per fleet member). Used ONLY to prefix
+       gz-sim sensor <topic> overrides below (camera/d435i, camera/floor, ultrasonic_N/scan,
+       lidar scan) - those are gz-transport GLOBAL topic strings, so two robots both
+       publishing a literal "camera/d435i" topic would collide/merge into one stream.
+
+       Link/joint names ("base_link", "left_wheel", etc.) are deliberately left UNPREFIXED,
+       even though this xacro is instantiated once per robot in one shared Gazebo world.
+       This was a genuine design decision, not an oversight:
+         - gz-sim scopes model/link/sensor ENTITIES per spawned model instance (each
+           `ros_gz_sim create -name robotN` call in fleet.launch.py creates its own model
+           tree) - link names only need to be unique WITHIN a model, not world-wide, so
+           "base_link" repeated across N spawned models does not collide in gz-sim itself.
+         - robot_state_publisher mirrors URDF link/joint names verbatim into published TF
+           frame_ids, with no automatic prefixing. Running it namespaced (robotN/) makes it
+           publish to the RELATIVE topic "tf" -> "/robotN/tf", which is what actually keeps
+           each robot's TF tree isolated (per-namespace /tf topic), NOT the frame_id text.
+           Keeping frame_ids as plain "base_link"/"odom"/"map" is exactly what Nav2 and
+           SLAM Toolbox expect by default inside a ROS namespace - this is the standard,
+           documented multi-robot Nav2 pattern (see the turtlebot3 multi-robot demo), and
+           is the choice fleet.launch.py's TF design comment builds on (see item 2 there).
+       So the only thing that genuinely needs robot_name string-prefixing is gz-transport
+       topic names, handled below at each sensor's <topic> element. -->
+  <xacro:arg name="robot_name" default="amr_ros_dg" />
+  <xacro:property name="robot_name" value="$(arg robot_name)" />
+
+  <!-- namespace_controller_manager: fleet.launch.py sets this true (see its xacro Command
+       substitution) so the gz_ros2_control plugin below puts each robot's controller_manager
+       under /robotN/, matching robot_state_publisher's namespaced /robotN/robot_description
+       topic. Left false by default (gazebo.launch.py, single-robot, does not set it) so the
+       existing single-robot pipeline keeps its unnamespaced /controller_manager, /joint_states,
+       /diff_drive_controller/cmd_vel topics unchanged - wasd_teleop.py, web_dashboard.py, and
+       the RViz config all assume those are unnamespaced today. -->
+  <xacro:arg name="namespace_controller_manager" default="false" />
+  <xacro:property name="namespace_controller_manager" value="$(arg namespace_controller_manager)" />
+
+  <!-- enable_cameras: default true (single-robot pipeline unchanged). fleet.launch.py can
+       pass this false to skip the d435i/floor camera <sensor> elements entirely - GPU-
+       rendered RGB cameras (30Hz/15Hz) were a real, measured contributor to Gazebo Sim's
+       GUI render cost on WSL2 (confirmed live: gz sim server+gui alone used ~300% CPU with
+       3 robots x 2 cameras each). The camera LINKS/meshes stay either way (cheap, no
+       rendering cost) - only the actual <sensor> (and its GPU image generation) is skipped. -->
+  <xacro:arg name="enable_cameras" default="true" />
+  <xacro:property name="enable_cameras" value="$(arg enable_cameras)" />
+
+  <!--
+    Migrated from the SolidWorks SW2URDF catkin export (see legacy/ros1_original_package/
+    amr_ros_dg_original.urdf for the raw ROS 1 output this was derived from).
+    All mass / center-of-mass / inertia / joint-origin values are taken verbatim from the
+    exporter CSV (already in meters / kilograms) — nothing here is invented.
+
+    The current meshes/*.STL (from the "AMR-ROS" re-export) are individually isolated, in
+    meters, and centered on each link's own coordinate system. No mesh scale factor is
+    needed. One CSV glitch in that re-export (caster_b_l mass/inertia came back as all
+    zeros) is not used here; caster_b_l below keeps its valid values from the original good
+    export. Old backups of broken mesh sets are kept under legacy/ for reference.
+
+    Kinematic tree:
+      base_link
+        * left_wheel_joint (continuous, axis 0 1 0)  to left_wheel
+        * right_wheel_joint (continuous, axis 0 1 0) to right_wheel
+        * caster_f_l_joint (continuous, axis 0 0 1)   to caster_f_l
+            * caster_wheel_f_l_joint (continuous)     to caster_wheel_f_l
+        * caster_f_r_joint to caster_f_r to caster_wheel_f_r_joint to caster_wheel_f_r
+        * caster_b_r_joint to caster_b_r to caster_wheel_b_r_joint to caster_wheel_b_r
+        * caster_b_l_joint to caster_b_l to caster_wheel_b_l_joint to caster_wheel_b_l
+
+    GAZEBO PHYSICS NOTES (Gazebo Sim / dartsim, no suspension modeled):
+      - Drive wheels provide traction (mu=1.0); casters are tip-over support only, not a
+        third traction point - their collision sits ~0.5mm above the drive wheel contact
+        plane on purpose, so they only touch when the chassis pitches/rolls enough to need
+        it, the same way a shopping cart's casters barely load until you lean it.
+      - All continuous joints need a non-zero <limit effort>. dartsim treats effort=0 (the
+        original SW2URDF placeholder for "passive, no motor") as fully locked, not free.
+      - Both drive wheels use the same axis direction (0 1 0). diff_drive_controller sends
+        identical-sign velocity commands to both wheel joints assuming positive = forward on
+        each; mirroring the axis for the mirrored mesh (as the raw export did) desyncs that.
+      - Collision cylinder radii for the wheels are trimmed by fractions of a millimeter from
+        their true CAD-measured values (commented at each site below). A rigid contact solver
+        with no suspension is sensitive even to ~0.01mm cross-wheel height differences -
+        confirmed by joint_states matching left/right drive wheel velocity to 10 decimal
+        places while the chassis still visibly arced, so the asymmetry was in which side had
+        more ground support, not in the commanded velocity.
+  -->
+
+  <xacro:property name="mesh_scale" value="1 1 1" />
+  <!-- Industrial color scheme: dark orange chassis, dark grey caster housings, dark blue
+       wheels (drive + caster) - was previously one pale near-white color across the robot. -->
+  <xacro:property name="chassis_color" value="0.75 0.48 0.05 1" />
+  <xacro:property name="caster_housing_color" value="0.15 0.16 0.18 1" />
+  <xacro:property name="wheel_color" value="0.07 0.11 0.22 1" />
+
+  <material name="amr_chassis_orange">
+    <color rgba="${chassis_color}" />
+  </material>
+  <material name="amr_caster_grey">
+    <color rgba="${caster_housing_color}" />
+  </material>
+  <material name="amr_wheel_darkblue">
+    <color rgba="${wheel_color}" />
+  </material>
+
+  <!-- ============================== base_link ============================== -->
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.0310943353661127 0.00027531991751642 -0.12487536514683" rpy="0 0 0" />
+      <mass value="21.3046134591674" />
+      <inertia
+        ixx="0.29613665577097" ixy="0.00195367305083866" ixz="4.4307398501902E-05"
+        iyy="0.422473357982575" iyz="-2.20145006753063E-07" izz="0.697298060229463" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://amr_ros_dg/meshes/base_link.STL" scale="${mesh_scale}" />
+      </geometry>
+      <material name="amr_chassis_orange" />
+    </visual>
+    <!-- No collision: wheels/casters alone provide ground contact. A chassis collision box
+         would overlap the running gear asymmetrically and tilt the robot in dartsim. -->
+  </link>
+
+  <!-- ============================== drive wheel macro ============================== -->
+  <xacro:macro name="drive_wheel"
+    params="name mesh
+            mass cx cy cz ixx ixy ixz iyy iyz izz
+            jx jy jz ax ay az
+            col_radius col_length col_oy">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${cx} ${cy} ${cz}" rpy="0 0 0" />
+        <mass value="${mass}" />
+        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_wheel_darkblue" />
+      </visual>
+      <!-- Collision is a cylinder, not the STL mesh (dartsim can't build mesh collision).
+           Rotated 90deg about X so the cylinder's Z-axis lines up with the wheel's real
+           rolling axis (Y). radius/length/y-offset measured from the wheel STL's bounding
+           box; col_radius is nudged a fraction of a mm from that measured value - see the
+           GAZEBO PHYSICS NOTES above and the comment at the two xacro:drive_wheel calls. -->
+      <collision>
+        <origin xyz="0 ${col_oy} 0" rpy="1.5707963 0 0" />
+        <geometry>
+          <cylinder radius="${col_radius}" length="${col_length}" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <origin xyz="${jx} ${jy} ${jz}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="${name}" />
+      <axis xyz="${ax} ${ay} ${az}" />
+      <!-- velocity raised 30.0 -> 60.0 to match the <ros2_control> command_interface limits
+           below (see the "Raised from 30.0 -> 60.0" comment there) - dartsim enforces this
+           joint-level limit independently of the command_interface's own min/max. -->
+      <limit effort="20.0" velocity="60.0" />
+      <dynamics damping="0.1" friction="0.2" />
+    </joint>
+  </xacro:macro>
+
+  <!-- col_radius on both wheels: the real jz values put the right wheel's bottom 0.06mm
+       lower than the left's (genuine CAD/export tolerance). Radii nudged by ~0.03mm each way
+       (not jz, not the visual mesh) so both wheel bottoms sit on the exact same plane. -->
+  <xacro:drive_wheel name="left_wheel" mesh="left_wheel.STL"
+    mass="0.585665991952606"
+    cx="-0.000108392816681013" cy="-0.0253615400637083" cz="-0.000239450250214657"
+    ixx="0.000928521729613518" ixy="-1.14250082228267E-10" ixz="1.00749289393112E-09"
+    iyy="0.00168853495795271" iyz="-2.52341752508342E-10" izz="0.000928564707830947"
+    jx="0.00010849" jy="0.2895" jz="-0.16929" ax="0" ay="1" az="0"
+    col_radius="0.07503" col_length="0.051" col_oy="-0.025" />
+
+  <xacro:drive_wheel name="right_wheel" mesh="right_wheel.STL"
+    mass="0.585665991952566"
+    cx="0.000186897669876618" cy="0.0253615400637088" cz="-0.000184809864538615"
+    ixx="0.000928527905827836" ixy="-1.96980205741672E-10" ixz="-1.51100007177081E-08"
+    iyy="0.00168853495795271" iyz="1.94752032949863E-10" izz="0.000928558531615229"
+    jx="-0.00018706" jy="-0.2895" jz="-0.16935" ax="0" ay="1" az="0"
+    col_radius="0.07497" col_length="0.051" col_oy="0.025" />
+
+  <gazebo reference="left_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <!-- ============================== caster corner macro ============================== -->
+  <!-- Each caster corner = swivel joint (continuous, axis 0 0 1) -> housing link
+       -> rolling joint (continuous, axis ~= local X) -> wheel link.
+       Caster role: tip-over/pitch support only, not a traction point - see w_col_radius
+       comment below the macro for how that's enforced in the collision geometry. -->
+  <xacro:macro name="caster_corner"
+    params="name wheel_name housing_mesh wheel_mesh
+            sx sy sz
+            h_mass h_cx h_cy h_cz h_ixx h_ixy h_ixz h_iyy h_iyz h_izz
+            wx wy wz wax way waz
+            w_mass w_cx w_cy w_cz w_ixx w_ixy w_ixz w_iyy w_iyz w_izz
+            h_col_sx h_col_sy h_col_sz h_col_ox h_col_oy h_col_oz
+            w_col_radius w_col_length">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${h_cx} ${h_cy} ${h_cz}" rpy="0 0 0" />
+        <mass value="${h_mass}" />
+        <inertia ixx="${h_ixx}" ixy="${h_ixy}" ixz="${h_ixz}" iyy="${h_iyy}" iyz="${h_iyz}" izz="${h_izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${housing_mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_caster_grey" />
+      </visual>
+      <!-- No housing collision: it would add friction torque on the swivel joint and
+           prevent free rotation. Only the caster wheel (below) provides ground contact. -->
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <origin xyz="${sx} ${sy} ${sz}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="${name}" />
+      <axis xyz="0 0 1" />
+      <!-- effort=2.0 (not 0, not a large number): non-zero avoids dartsim treating this
+           passive joint as locked; kept small (this ~30g housing needs no more) so a bad
+           contact-solve step can't inject a large spurious torque that never damps out.
+           damping=0.02 (not 0): lets the caster settle into its trailing orientation instead
+           of oscillating on every start from rest. Never driven through ros2_control. -->
+      <limit effort="2.0" velocity="30.0" />
+      <dynamics damping="0.02" friction="0.0" />
+    </joint>
+
+    <link name="${wheel_name}">
+      <inertial>
+        <origin xyz="${w_cx} ${w_cy} ${w_cz}" rpy="0 0 0" />
+        <mass value="${w_mass}" />
+        <inertia ixx="${w_ixx}" ixy="${w_ixy}" ixz="${w_ixz}" iyy="${w_iyy}" iyz="${w_iyz}" izz="${w_izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${wheel_mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_wheel_darkblue" />
+      </visual>
+      <!-- Collision is a cylinder, not the STL mesh. Rotated 90deg about Y so the cylinder's
+           Z-axis lines up with the caster wheel's real rolling axis (~X). -->
+      <collision>
+        <origin xyz="0 0 0" rpy="0 1.5707963 0" />
+        <geometry>
+          <cylinder radius="${w_col_radius}" length="${w_col_length}" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${wheel_name}_joint" type="continuous">
+      <origin xyz="${wx} ${wy} ${wz}" rpy="0 0 0" />
+      <parent link="${name}" />
+      <child link="${wheel_name}" />
+      <axis xyz="${wax} ${way} ${waz}" />
+      <!-- Same reasoning as the swivel joint above: effort=2.0 (non-zero, but small - this
+           121g wheel needs no more), damping=0.01 (non-zero, so residual spin bleeds off). -->
+      <limit effort="2.0" velocity="30.0" />
+      <dynamics damping="0.01" friction="0.0" />
+    </joint>
+  </xacro:macro>
+
+  <!-- w_col_radius on all 4 corners: this puts the caster wheel bottom ~0.5mm ABOVE the
+       drive wheel bottom (target contact plane z=-0.24432, same for both wheel types), not
+       level with it. The casters are a tip-over/pitch backstop, not a permanent contact
+       point - the drive wheels alone should always be the ones bearing weight and traction,
+       and a caster only engages once the chassis pitches or rolls enough to close that
+       0.5mm gap, exactly like a shopping cart's casters barely touching until you lean it.
+       Same radius (0.03229) on all 4 corners even though the real CAD radii differ slightly
+       corner to corner (0.0376 vs 0.0377) - see the cross-wheel-height sensitivity note in
+       the file header. -->
+
+  <!-- front-left -->
+  <xacro:caster_corner name="caster_f_l" wheel_name="caster_wheel_f_l"
+    housing_mesh="caster_f_l.STL" wheel_mesh="caster_wheel_f_l.STL"
+    sx="0.275" sy="0.17" sz="-0.15478"
+    h_mass="0.0343773761631997"
+    h_cx="-0.000211217029093325" h_cy="-0.00488343337310898" h_cz="-0.0278047373445326"
+    h_ixx="7.07816892636274E-06" h_ixy="1.60117057840084E-07" h_ixz="-1.13833743869238E-08"
+    h_iyy="1.07770901763347E-05" h_iyz="-2.74463122286201E-07" h_izz="1.35458216911075E-05"
+    wx="0.00064749" wy="0.014986" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260006277754798" w_cy="-1.12338994395222E-05" w_cz="-5.55111512312578E-17"
+    w_ixx="8.85486982719961E-05" w_ixy="-1.52127688306059E-06" w_ixz="-1.20806832920016E-19"
+    w_iyy="5.34047883182945E-05" w_iyz="1.85942777553269E-19" w_izz="5.33390596302369E-05"
+    h_col_sx="0.0525" h_col_sy="0.0689" h_col_sz="0.0645"
+    h_col_ox="0" h_col_oy="-0.00655" h_col_oz="-0.032"
+    w_col_radius="0.03229" w_col_length="0.0365" />
+
+  <!-- front-right -->
+  <xacro:caster_corner name="caster_f_r" wheel_name="caster_wheel_f_r"
+    housing_mesh="caster_f_r.STL" wheel_mesh="caster_wheel_f_r.STL"
+    sx="0.275" sy="-0.17" sz="-0.15478"
+    h_mass="0.034377376177769"
+    h_cx="-2.21908344033572E-07" h_cy="-0.00488799899349841" h_cz="-0.0278047373438943"
+    h_ixx="7.07125079899759E-06" h_ixy="1.59066340376663E-12" h_ixz="4.74709220715998E-10"
+    h_iyy="1.07840083029693E-05" h_iyz="-2.74698674033133E-07" h_izz="1.35458216896774E-05"
+    wx="0" wy="0.015" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260248852002487" w_cy="-2.08166817117217E-17" w_cz="-5.55111512312578E-17"
+    w_ixx="8.86144269600542E-05" w_ixy="1.25769959385598E-19" w_ixz="-1.11966583470812E-19"
+    w_iyy="5.33390596302359E-05" w_iyz="-3.58784234590011E-19" w_izz="5.33390596302365E-05"
+    h_col_sx="0.0514" h_col_sy="0.0670" h_col_sz="0.0645"
+    h_col_ox="0" h_col_oy="-0.0065" h_col_oz="-0.032"
+    w_col_radius="0.03229" w_col_length="0.0350" />
+
+  <!-- back-right -->
+  <xacro:caster_corner name="caster_b_r" wheel_name="caster_wheel_b_r"
+    housing_mesh="caster_b_r.STL" wheel_mesh="caster_wheel_b_r.STL"
+    sx="-0.275" sy="-0.17" sz="-0.15478"
+    h_mass="0.0343773762451283"
+    h_cx="-2.21909206808701E-07" h_cy="-0.00488799904923643" h_cz="-0.0278047373832745"
+    h_ixx="7.07125079999909E-06" h_ixy="1.59079082659352E-12" h_ixz="4.74709238887088E-10"
+    h_iyy="1.07840083034564E-05" h_iyz="-2.74698674016186E-07" h_izz="1.35458216910767E-05"
+    wx="0" wy="0.015" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000260248852002418" w_cy="-2.77555756156289E-17" w_cz="0"
+    w_ixx="8.86144269600547E-05" w_ixy="1.24136366723561E-19" w_ixz="-1.24445298405647E-19"
+    w_iyy="5.3339059630236E-05" w_iyz="1.76755868611897E-19" w_izz="5.33390596302369E-05"
+    h_col_sx="0.0514" h_col_sy="0.0670" h_col_sz="0.0645"
+    h_col_ox="0" h_col_oy="-0.0065" h_col_oz="-0.032"
+    w_col_radius="0.03229" w_col_length="0.0350" />
+
+  <!-- back-left -->
+  <xacro:caster_corner name="caster_b_l" wheel_name="caster_wheel_b_l"
+    housing_mesh="caster_b_l.STL" wheel_mesh="caster_wheel_b_l.STL"
+    sx="-0.275000000000001" sy="0.169999999999999" sz="-0.154782629740985"
+    h_mass="0.0343773762339354"
+    h_cx="-0.000504007629840188" h_cy="-0.00486194519645511" h_cz="-0.0278047373888992"
+    h_ixx="7.11069032397272E-06" h_ixy="3.80623065539692E-07" h_ixz="-2.78399345059836E-08"
+    h_iyy="1.07445687795745E-05" h_iyz="-2.73284695045809E-07" h_izz="1.35458216922227E-05"
+    wx="0.001546" wy="0.01492" wz="-0.05225" wax="1" way="0" waz="0"
+    w_mass="0.121190564506901"
+    w_cx="0.000258862899684381" w_cy="-2.68228286273153E-05" w_cz="0"
+    w_ixx="8.82397102592137E-05" w_ixy="-3.61633193455675E-06" w_ixz="-1.0319517758726E-19"
+    w_iyy="5.37137763310779E-05" w_iyz="1.7418729813812E-19" w_izz="5.3339059630236E-05"
+    h_col_sx="0.0546" h_col_sy="0.0713" h_col_sz="0.0645"
+    h_col_ox="-0.00037" h_col_oy="-0.00659" h_col_oz="-0.032"
+    w_col_radius="0.03229" w_col_length="0.0384" />
+
+  <!-- ============================== sensors (new, not in the original CAD/SW export) ==============================
+       These mounts are NOT in the SolidWorks assembly - there is no CAD/coordinate-system
+       data to pull exact numbers from. Placements were measured directly against the real
+       base_link.STL surface: for each mount height, every vertex of the mesh within a thin
+       z-band was projected to the XY plane, and the outer radius at each sensor's angle was
+       read off that real cross-section (98th-percentile radius in a +/-6 deg window, robust
+       to stray facets). Still confirm the visual result in RViz.
+
+       front_sign: this xacro assumes +X = forward. If the camera ends up pointing at the
+       robot's back end in RViz, flip this to -1 and re-check. -->
+  <xacro:property name="front_sign" value="1.0" />
+
+  <!-- === Intel RealSense D435i, front, fixed ===
+       Real D435i housing dimensions (public spec): 90 x 25 x 25 mm. Position measured off
+       the real front-face mesh radius at z=-0.06 (~0.3496 m from base_link origin), sitting
+       just proud of that surface like a real camera bump. -->
+  <xacro:property name="d435i_height_z" value="-0.06" />
+  <xacro:property name="d435i_front_x" value="0.345" />
+
+  <link name="d435i_link">
+    <visual>
+      <geometry>
+        <box size="0.025 0.090 0.025" />
+      </geometry>
+      <material name="d435i_black">
+        <color rgba="0.05 0.05 0.05 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.025 0.090 0.025" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.072" /> <!-- real D435i weight, public spec -->
+      <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6" />
+    </inertial>
+  </link>
+  <joint name="d435i_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="d435i_link" />
+    <origin xyz="${front_sign * d435i_front_x} 0 ${d435i_height_z}" rpy="0 0 0" />
+  </joint>
+
+  <!-- gz-sim camera sensor looks along the LINK's own local +X axis (not the ROS optical-frame
+       Z-forward convention) - since d435i_joint has rpy 0 0 0 and the link sits further along
+       +X than base_link, no extra rotation is needed here for it to look forward.
+       horizontal_fov 1.211259 rad = ~69.4deg, the real D435i RGB stream's public spec.
+       Requires the world to load the gz-sim Sensors system (worlds/amr_test_world.sdf) -
+       without it this element exists in the SDF but silently never publishes anything. -->
+  <gazebo reference="d435i_link">
+    <xacro:if value="$(arg enable_cameras)">
+      <sensor name="d435i_camera" type="camera">
+        <camera>
+          <horizontal_fov>1.211259</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+        <always_on>true</always_on>
+        <update_rate>30</update_rate>
+        <visualize>true</visualize>
+        <topic>${robot_name}/camera/d435i</topic>
+      </sensor>
+    </xacro:if>
+    <!-- <visual><material> (not a bare <material> directly under <gazebo reference>) is the
+         syntax sdformat's urdf2sdf actually merges into the link's visual - see the GAZEBO
+         PHYSICS NOTES header for why the URDF-side <material><color> alone isn't reliable. -->
+    <visual>
+      <material>
+        <ambient>0.05 0.05 0.05 1</ambient>
+        <diffuse>0.05 0.05 0.05 1</diffuse>
+        <specular>0.4 0.4 0.4 1</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <!-- === downward floor/barcode camera, fixed, 8cm above the floor === -->
+  <xacro:property name="floor_z" value="-0.244" />
+  <xacro:property name="barcode_cam_height_above_floor" value="0.08" />
+
+  <link name="floor_camera_link">
+    <visual>
+      <geometry>
+        <box size="0.04 0.04 0.03" />
+      </geometry>
+      <material name="floor_cam_grey">
+        <color rgba="0.2 0.2 0.2 1" />
+      </material>
+    </visual>
+    <collision>
+      <geometry>
+        <box size="0.04 0.04 0.03" />
+      </geometry>
+    </collision>
+    <inertial>
+      <mass value="0.05" />
+      <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6" />
+    </inertial>
+  </link>
+  <joint name="floor_camera_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="floor_camera_link" />
+    <!-- pitch = pi/2 about Y so -Z (down in the box's own frame) points straight at the floor -->
+    <origin xyz="0 0 ${floor_z + barcode_cam_height_above_floor}" rpy="0 1.5707963 0" />
+  </joint>
+
+  <!-- Same gz-sim camera sensor type as the D435i above. Generic placeholder FOV/resolution
+       (no real hardware chosen for this one yet, per README) - not a public spec. -->
+  <gazebo reference="floor_camera_link">
+    <xacro:if value="$(arg enable_cameras)">
+      <sensor name="floor_camera" type="camera">
+        <camera>
+          <horizontal_fov>1.0</horizontal_fov>
+          <image>
+            <width>320</width>
+            <height>240</height>
+          </image>
+          <clip>
+            <near>0.02</near>
+            <far>5</far>
+          </clip>
+        </camera>
+        <always_on>true</always_on>
+        <update_rate>15</update_rate>
+        <visualize>true</visualize>
+        <topic>${robot_name}/camera/floor</topic>
+      </sensor>
+    </xacro:if>
+    <visual>
+      <material>
+        <ambient>0.2 0.2 0.2 1</ambient>
+        <diffuse>0.2 0.2 0.2 1</diffuse>
+        <specular>0.2 0.2 0.2 1</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <!-- === 12x ultrasonic ring, evenly spaced 30 deg apart, fixed, pointing radially outward ===
+       Mounting radius per sensor is the real measured base_link.STL surface radius at that
+       angle and height z=-0.05 - the body is a rounded shape, not an ellipse, so radius
+       genuinely varies per angle (0.306 m at the sides, up to 0.383 m at the back). A 12mm
+       protrusion margin sits each sensor as a visible bump on the surface. -->
+  <xacro:property name="ring_height_z" value="-0.05" />
+  <xacro:property name="sensor_surface_margin" value="0.012" />
+
+  <xacro:macro name="ultrasonic_sensor" params="index angle_deg radius_m">
+    <link name="ultrasonic_${index}_link">
+      <visual>
+        <geometry>
+          <cylinder radius="0.008" length="0.02" />
+        </geometry>
+        <material name="ultrasonic_grey">
+          <color rgba="0.3 0.3 0.3 1" />
+        </material>
+      </visual>
+      <collision>
+        <geometry>
+          <cylinder radius="0.008" length="0.02" />
+        </geometry>
+      </collision>
+      <inertial>
+        <mass value="0.01" />
+        <inertia ixx="1e-7" ixy="0.0" ixz="0.0" iyy="1e-7" iyz="0.0" izz="1e-7" />
+      </inertial>
+    </link>
+    <joint name="ultrasonic_${index}_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="ultrasonic_${index}_link" />
+      <origin
+        xyz="${(radius_m + sensor_surface_margin) * cos(radians(angle_deg))}
+             ${(radius_m + sensor_surface_margin) * sin(radians(angle_deg))}
+             ${ring_height_z}"
+        rpy="0 1.5707963 ${radians(angle_deg)}" />
+    </joint>
+
+    <!-- gz-sim has no dedicated "ultrasonic" sensor type - a single-ray gpu_lidar (1 sample,
+         zero-width horizontal/vertical FOV) is the standard simulation stand-in for a sonar
+         puck, giving one distance reading per update like a real ultrasonic sensor would.
+         range 0.02-4m and resolution are simulation defaults, not a real ultrasonic's public
+         spec (no specific hardware chosen yet, matches the rest of this sensor block). -->
+    <gazebo reference="ultrasonic_${index}_link">
+      <sensor name="ultrasonic_${index}_sensor" type="gpu_lidar">
+        <lidar>
+          <scan>
+            <horizontal>
+              <samples>1</samples>
+              <min_angle>0</min_angle>
+              <max_angle>0</max_angle>
+            </horizontal>
+            <vertical>
+              <samples>1</samples>
+              <min_angle>0</min_angle>
+              <max_angle>0</max_angle>
+            </vertical>
+          </scan>
+          <range>
+            <min>0.02</min>
+            <max>4.0</max>
+            <resolution>0.01</resolution>
+          </range>
+        </lidar>
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <visualize>false</visualize>
+        <topic>${robot_name}/ultrasonic_${index}/scan</topic>
+      </sensor>
+      <visual>
+        <material>
+          <ambient>0.3 0.3 0.3 1</ambient>
+          <diffuse>0.3 0.3 0.3 1</diffuse>
+          <specular>0.2 0.2 0.2 1</specular>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:macro>
+
+  <!-- radius_m = measured real surface radius (m) at that angle, height z=-0.05 -->
+  <xacro:ultrasonic_sensor index="1"  angle_deg="0"   radius_m="0.3496" />
+  <xacro:ultrasonic_sensor index="2"  angle_deg="30"  radius_m="0.3786" />
+  <xacro:ultrasonic_sensor index="3"  angle_deg="60"  radius_m="0.3529" />
+  <xacro:ultrasonic_sensor index="4"  angle_deg="90"  radius_m="0.3057" />
+  <xacro:ultrasonic_sensor index="5"  angle_deg="120" radius_m="0.3530" />
+  <xacro:ultrasonic_sensor index="6"  angle_deg="150" radius_m="0.3786" />
+  <xacro:ultrasonic_sensor index="7"  angle_deg="180" radius_m="0.3827" />
+  <xacro:ultrasonic_sensor index="8"  angle_deg="210" radius_m="0.3786" />
+  <xacro:ultrasonic_sensor index="9"  angle_deg="240" radius_m="0.3529" />
+  <xacro:ultrasonic_sensor index="10" angle_deg="270" radius_m="0.3059" />
+  <xacro:ultrasonic_sensor index="11" angle_deg="300" radius_m="0.3530" />
+  <xacro:ultrasonic_sensor index="12" angle_deg="330" radius_m="0.3786" />
+
+  <!-- === 2D planar SLAM lidar, top-front-center, fixed ===
+       Not in the original CAD/SW export (same situation as the D435i/floor-camera/
+       ultrasonic sensors above) - no CAD coordinate system to pull an exact mount point
+       from. Placed top-front-center (x=0.30m forward of base_link origin, z=0.20m up,
+       roughly chassis-top height going by the ultrasonic ring's z=-0.05 to -0.15 range
+       and floor_z=-0.244), the conventional spot for a 2D lidar puck on an AMR so its
+       360 deg sweep isn't blocked by the chassis body. Estimated, not measured - confirm
+       clearance against base_link.STL in RViz same as the other added sensors.
+
+       Full 360 deg sweep (min -pi, max pi), not the single-ray ultrasonic style above -
+       this is the real SLAM Toolbox / Nav2 costmap input, so it needs a genuine
+       horizontal scan. 360 samples = 1 deg resolution, a standard low-cost 2D lidar
+       spec (e.g. RPLidar-class); range 0.1-12m and 10Hz likewise standard 2D-lidar
+       defaults, not a chosen real part (no hardware picked yet, same caveat as the other
+       "no real hardware chosen" sensors in this file). -->
+  <!-- x=0.32/z=0.002 (past the footprint edge, flush with the chassis surface) originally
+       broke navigation: with the OLD full 360-degree sweep, rays pointed backward/sideways
+       from this position hit the robot's own chassis mesh at near-zero range (gz-sim's
+       gpu_lidar ray-casts the rendered/visual mesh, not collision geometry, so removing
+       lidar_link's <collision> above didn't help) - collision_monitor read that as an
+       imminent collision and permanently withheld cmd_vel. Now that the sweep is narrowed
+       to 120 degrees centered on forward (+-60deg, see min_angle/max_angle below) and the
+       robot only ever drives forward, nothing of the chassis sits inside that forward cone
+       from this position (it's past the front edge, chassis is behind/below it), so the
+       self-detection problem no longer applies - restored to the requested flush mount. -->
+  <xacro:property name="lidar_x" value="0.32" />
+  <xacro:property name="lidar_z" value="0.002" />
+
+  <link name="lidar_link">
+    <visual>
+      <geometry>
+        <cylinder radius="0.035" length="0.04" />
+      </geometry>
+      <material name="lidar_black">
+        <color rgba="0.05 0.05 0.05 1" />
+      </material>
+    </visual>
+    <!-- No collision geometry, same reasoning as base_link's own "No collision" note above:
+         lidar_link is fixed-jointed to base_link, so dartsim/sdformat LUMPS its collision
+         into base_link's rigid body. Whenever lidar_x/lidar_z were tuned close to the
+         chassis surface or past its footprint edge (both tried live), that lumped collision
+         cylinder started interpenetrating the ground/chassis and froze the robot in place
+         (confirmed live: /odom position stopped changing entirely, cmd_vel chain otherwise
+         fine) - a small sensor puck doesn't need its own physics collision anyway. -->
+    <inertial>
+      <mass value="0.08" />
+      <inertia ixx="1e-6" ixy="0.0" ixz="0.0" iyy="1e-6" iyz="0.0" izz="1e-6" />
+    </inertial>
+  </link>
+  <joint name="lidar_joint" type="fixed">
+    <parent link="base_link" />
+    <child link="lidar_link" />
+    <origin xyz="${front_sign * lidar_x} 0 ${lidar_z}" rpy="0 0 0" />
+  </joint>
+
+  <!-- Narrowed to a 120-degree forward-facing sweep (+-60deg) per explicit request, down
+       from the full 360-degree sweep. This intentionally gives up rear/side coverage - the
+       robot's own chassis is no longer in view (see the self-detection/collision_monitor
+       lockup this file's history notes elsewhere), but so is any real obstacle behind or
+       beside the robot; SLAM Toolbox and Nav2's costmaps will only ever see what's ahead.
+       samples reduced from 360 to 120 to keep the same ~1deg/sample resolution over the
+       smaller range, not a resolution change. topic prefixed with robot_name (see the
+       multi-robot property comment near the top of this file) since gz-transport topics
+       are global, not per-model. -->
+  <gazebo reference="lidar_link">
+    <sensor name="lidar_sensor" type="gpu_lidar">
+      <lidar>
+        <scan>
+          <horizontal>
+            <samples>120</samples>
+            <min_angle>-1.0471975512</min_angle>
+            <max_angle>1.0471975512</max_angle>
+          </horizontal>
+          <vertical>
+            <samples>1</samples>
+            <min_angle>0</min_angle>
+            <max_angle>0</max_angle>
+          </vertical>
+        </scan>
+        <range>
+          <min>0.1</min>
+          <max>12.0</max>
+          <resolution>0.01</resolution>
+        </range>
+      </lidar>
+      <always_on>true</always_on>
+      <update_rate>10</update_rate>
+      <visualize>true</visualize>
+      <topic>${robot_name}/scan</topic>
+      <!-- Without this, gz-sim's LaserScan bridge stamped every message with frame_id
+           "<model>/base_link/lidar_sensor" instead of "lidar_link" - sdformat's URDF->SDF
+           conversion apparently lumps this fixed-jointed child link into base_link for
+           frame-naming purposes despite lidar_link having its own mass/inertia (confirmed
+           live in WSL: slam_toolbox logged "Message Filter dropping message: frame
+           'robot1/base_link/lidar_sensor' ... discarding message because the queue is
+           full" forever - no TF exists for that composite name, so scans were silently
+           discarded and no map was ever built). <gz_frame_id> is gz-sensors' explicit
+           override for exactly this situation - forces the published frame_id to match
+           the plain "lidar_link" name robot_state_publisher actually publishes a
+           base_link->lidar_link transform for. -->
+      <gz_frame_id>lidar_link</gz_frame_id>
+    </sensor>
+    <!-- <visual><material> (not a bare <material> directly under <gazebo reference>) - see
+         the "Gazebo render materials" comment block below for why the other syntax
+         silently gets dropped by sdformat's urdf2sdf. -->
+    <visual>
+      <material>
+        <ambient>0.05 0.05 0.05 1</ambient>
+        <diffuse>0.05 0.05 0.05 1</diffuse>
+        <specular>0.4 0.4 0.4 1</specular>
+      </material>
+    </visual>
+  </gazebo>
+
+  <!-- ============================== Gazebo render materials ==============================
+       gz sim's URDF->SDF conversion does not reliably carry the <material><color> tags
+       above into the SDF visuals, so without this the whole robot renders flat default-grey
+       in Gazebo even though RViz shows the real colors. The mechanism that actually works is
+       <gazebo reference="link"><visual><material>... (NOT a bare <material> directly under
+       <gazebo reference>, which sdformat's urdf2sdf does not merge into the visual - that
+       was the mistake in an earlier version of this file, and why the robot was still all
+       grey after adding it). The two camera links (d435i_link, floor_camera_link) get their
+       <visual><material> alongside their <sensor> block instead of a separate <gazebo
+       reference> here, since a link can only sensibly own one merged gazebo extension. -->
+  <xacro:macro name="body_material" params="link color">
+    <gazebo reference="${link}">
+      <visual>
+        <material>
+          <ambient>${color}</ambient>
+          <diffuse>${color}</diffuse>
+          <specular>0.3 0.3 0.3 1</specular>
+        </material>
+      </visual>
+    </gazebo>
+  </xacro:macro>
+  <xacro:body_material link="base_link" color="${chassis_color}" />
+  <xacro:body_material link="left_wheel" color="${wheel_color}" />
+  <xacro:body_material link="right_wheel" color="${wheel_color}" />
+  <xacro:body_material link="caster_f_l" color="${caster_housing_color}" />
+  <xacro:body_material link="caster_wheel_f_l" color="${wheel_color}" />
+  <xacro:body_material link="caster_f_r" color="${caster_housing_color}" />
+  <xacro:body_material link="caster_wheel_f_r" color="${wheel_color}" />
+  <xacro:body_material link="caster_b_r" color="${caster_housing_color}" />
+  <xacro:body_material link="caster_wheel_b_r" color="${wheel_color}" />
+  <xacro:body_material link="caster_b_l" color="${caster_housing_color}" />
+  <xacro:body_material link="caster_wheel_b_l" color="${wheel_color}" />
+
+  <!-- ============================== drive wheel-ground friction ==============================
+       mu1/mu2=1.0 for real traction - without any friction set, wheels spin at the correct
+       commanded velocity but the chassis never translates (zero-friction wheel-slip). Not a
+       measured tire property (no real hardware exists yet), just a standard rubber default. -->
+  <xacro:macro name="wheel_friction" params="link">
+    <gazebo reference="${link}">
+      <mu1>1.0</mu1>
+      <mu2>1.0</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:wheel_friction link="left_wheel" />
+  <xacro:wheel_friction link="right_wheel" />
+
+  <!-- ============================== caster wheel-ground friction ==============================
+       LOW (0.15), not 1.0 like the drive wheels: casters only support weight, they don't
+       need traction, and their self-aligning trail is small (~15mm vs ~37.6mm wheel radius)
+       so a skewed caster under high friction scrubs instead of rolling - enough drag to
+       overpower the drive wheels entirely. Not near-zero either (0.05 let the chassis creep
+       after a stop instead of settling) - 0.15 is the middle ground. -->
+  <xacro:macro name="caster_wheel_friction" params="link">
+    <gazebo reference="${link}">
+      <mu1>0.15</mu1>
+      <mu2>0.15</mu2>
+    </gazebo>
+  </xacro:macro>
+  <xacro:caster_wheel_friction link="caster_wheel_f_l" />
+  <xacro:caster_wheel_friction link="caster_wheel_f_r" />
+  <xacro:caster_wheel_friction link="caster_wheel_b_r" />
+  <xacro:caster_wheel_friction link="caster_wheel_b_l" />
+
+  <!-- ============================== ros2_control (Gazebo phase) ==============================
+       Only the two drive wheels are actuated. Casters stay passive (no <joint> entry here) -
+       Gazebo just lets them spin/swivel freely under contact + the dynamics on their <joint>
+       tags above.
+
+       Command/state interface = velocity only, so no PID gains need to be invented -
+       gz_ros2_control drives the velocity command interface directly as a joint velocity
+       target. effort/velocity bounds match the wheel joints (SolidWorks CSV: effort=20 N-m,
+       velocity=30 rad/s). -->
+  <ros2_control name="amr_ros_dg_system" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <!-- Raised from 30.0 -> 60.0 rad/s: at wheel_radius=0.075, 30 rad/s caps linear speed at
+         2.25 m/s, which was silently clamping Nav2's 2.0 m/s cruise target (near the ceiling,
+         no headroom for turns) - this was the actual reason the robot still looked slow after
+         nav2_params.yaml/amr_ros_dg_controllers.yaml were raised. 60 rad/s allows 4.5 m/s. -->
+    <joint name="left_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-60.0</param>
+        <param name="max">60.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-60.0</param>
+        <param name="max">60.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find amr_ros_dg)/config/amr_ros_dg_controllers.yaml</parameters>
+      <!-- Fleet mode only (see namespace_controller_manager property comment above): without
+           this <ros><namespace> tag, gz_ros2_control's controller_manager node comes up
+           unnamespaced regardless of robot_name, and subscribes to a plain "robot_description"
+           topic that no robot in a namespaced fleet ever publishes (each publishes
+           /robotN/robot_description) - it just hangs forever logging "Waiting for data on
+           robot_description topic to finish initialization", which is exactly what happened
+           before this was added (confirmed live in WSL: 3 robots spawned fine, but zero
+           /robotN/joint_states ever appeared, and every controller/diff_drive spawner timed
+           out with "Failed to acquire lock" waiting on a controller_manager that never came up). -->
+      <!-- Using $(arg ...) directly (not the namespace_controller_manager PROPERTY) as the
+           xacro:if condition - xacro has built-in true/false string recognition for raw
+           $(arg) substitutions used this way; going through the property indirection
+           (${namespace_controller_manager == 'true'}) silently evaluated false always (a
+           real bug hit and fixed here: `xacro robot_name:=robot1
+           namespace_controller_manager:=true` produced NO <ros><namespace> tag in the
+           output at all, confirmed with `xacro ... | grep -A6 GazeboSimROS2ControlPlugin`). -->
+      <xacro:if value="$(arg namespace_controller_manager)">
+        <ros>
+          <namespace>${robot_name}</namespace>
+          <!-- diff_drive_controller's tf2_ros::TransformBroadcaster publishes to the
+               HARDCODED absolute topic "/tf" (a long-standing tf2 behavior - it does not
+               respect node namespacing like ordinary topics do), so without this remap
+               every robot's odom->base_link transform lands on the single global /tf
+               topic instead of /robotN/tf. Symptom seen live in WSL: Nav2's local_costmap
+               logged "Timed out waiting for transform from base_link to odom... frame does
+               not exist" forever (it only looks on /robotN/tf) even though
+               diff_drive_controller was confirmed active and definitely computing odometry.
+               nav2_bringup's own navigation_launch.py applies this exact same remap to all
+               ITS nodes for the same reason - controller_manager (spawned by this Gazebo
+               plugin, not by a launch Node()) needed it added separately here since launch
+               remappings=[] can't reach a node Gazebo spawns internally.
+               Remap TARGET is the fully-qualified absolute topic (/${robot_name}/tf), not
+               a bare relative "tf" - confirmed live in WSL that the relative form does NOT
+               work here either (same fix applied to fleet.launch.py's robot_state_publisher
+               and slam_toolbox Node()s, see their comments for the full story). -->
+          <remapping>/tf:=/${robot_name}/tf</remapping>
+          <remapping>/tf_static:=/${robot_name}/tf_static</remapping>
+        </ros>
+      </xacro:if>
+    </plugin>
+  </gazebo>
+
+</robot>

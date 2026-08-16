@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lint-and-unit-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install test dependencies
+        run: pip install pytest
+
+      - name: Run ROS-free unit tests (agent backends, protocol logic, analysis)
+        # These packages are ament_python-structured but have zero rclpy
+        # dependency in their unit-tested logic; pointing PYTHONPATH at each
+        # package's inner source directory is enough to run them without a
+        # full ROS 2 install/colcon build, matching this project's own
+        # design goal (see README.md "Running the test suite").
+        env:
+          PYTHONPATH: src/agent_core:src/robot_health:src/fleet_coordination:src/experiment_manager
+        run: |
+          python3 -m pytest src/agent_core/test src/robot_health/test \
+            src/fleet_coordination/test src/experiment_manager/test \
+            analysis/scripts -q
+
+      - name: Run phase2 (long-horizon extension) unit tests
+        run: python3 -m pytest phase2/test -q
+
+  # Full ROS 2 + Gazebo embodied simulation is not run in CI - it is
+  # computationally impractical on hosted runners (see docs/current_limitations.md
+  # for this platform's own documented realtime-factor constraints).

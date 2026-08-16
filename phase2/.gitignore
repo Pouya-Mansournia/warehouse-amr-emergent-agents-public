@@ -1,0 +1,4 @@
+experiments/*/
+!experiments/.gitkeep
+__pycache__/
+*.pyc

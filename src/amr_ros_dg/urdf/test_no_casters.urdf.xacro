@@ -1,0 +1,128 @@
+<?xml version="1.0"?>
+<!-- TEMPORARY diagnostic file - not part of the real robot. Strips out the 4 casters and all
+     sensors, keeping only base_link + the 2 drive wheels + ros2_control, to test whether the
+     casters are what's preventing the robot from translating in Gazebo. Delete once the real
+     bug is found; this is not meant to be a long-term file. -->
+<robot name="amr_ros_dg_test" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+  <xacro:property name="mesh_scale" value="1 1 1" />
+  <xacro:property name="body_color" value="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+
+  <material name="amr_body_grey">
+    <color rgba="${body_color}" />
+  </material>
+
+  <link name="base_link">
+    <inertial>
+      <origin xyz="-0.0310943353661127 0.00027531991751642 -0.12487536514683" rpy="0 0 0" />
+      <mass value="21.3046134591674" />
+      <inertia
+        ixx="0.29613665577097" ixy="0.00195367305083866" ixz="4.4307398501902E-05"
+        iyy="0.422473357982575" iyz="-2.20145006753063E-07" izz="0.697298060229463" />
+    </inertial>
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://amr_ros_dg/meshes/base_link.STL" scale="${mesh_scale}" />
+      </geometry>
+      <material name="amr_body_grey" />
+    </visual>
+    <collision>
+      <origin xyz="0 0 -0.04" rpy="0 0 0" />
+      <geometry>
+        <box size="0.7939 0.6113 0.08" />
+      </geometry>
+    </collision>
+  </link>
+
+  <xacro:macro name="drive_wheel"
+    params="name mesh
+            mass cx cy cz ixx ixy ixz iyy iyz izz
+            jx jy jz ax ay az
+            col_radius col_length col_oy">
+    <link name="${name}">
+      <inertial>
+        <origin xyz="${cx} ${cy} ${cz}" rpy="0 0 0" />
+        <mass value="${mass}" />
+        <inertia ixx="${ixx}" ixy="${ixy}" ixz="${ixz}" iyy="${iyy}" iyz="${iyz}" izz="${izz}" />
+      </inertial>
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0" />
+        <geometry>
+          <mesh filename="package://amr_ros_dg/meshes/${mesh}" scale="${mesh_scale}" />
+        </geometry>
+        <material name="amr_body_grey" />
+      </visual>
+      <collision>
+        <origin xyz="0 ${col_oy} 0" rpy="1.5707963 0 0" />
+        <geometry>
+          <cylinder radius="${col_radius}" length="${col_length}" />
+        </geometry>
+      </collision>
+    </link>
+    <joint name="${name}_joint" type="continuous">
+      <origin xyz="${jx} ${jy} ${jz}" rpy="0 0 0" />
+      <parent link="base_link" />
+      <child link="${name}" />
+      <axis xyz="${ax} ${ay} ${az}" />
+      <limit effort="20.0" velocity="30.0" />
+      <dynamics damping="0.1" friction="0.2" />
+    </joint>
+  </xacro:macro>
+
+  <xacro:drive_wheel name="left_wheel" mesh="left_wheel.STL"
+    mass="0.585665991952606"
+    cx="-0.000108392816681013" cy="-0.0253615400637083" cz="-0.000239450250214657"
+    ixx="0.000928521729613518" ixy="-1.14250082228267E-10" ixz="1.00749289393112E-09"
+    iyy="0.00168853495795271" iyz="-2.52341752508342E-10" izz="0.000928564707830947"
+    jx="0.00010849" jy="0.2895" jz="-0.16929" ax="0" ay="1" az="0"
+    col_radius="0.075" col_length="0.051" col_oy="-0.025" />
+
+  <xacro:drive_wheel name="right_wheel" mesh="right_wheel.STL"
+    mass="0.585665991952566"
+    cx="0.000186897669876618" cy="0.0253615400637088" cz="-0.000184809864538615"
+    ixx="0.000928527905827836" ixy="-1.96980205741672E-10" ixz="-1.51100007177081E-08"
+    iyy="0.00168853495795271" iyz="1.94752032949863E-10" izz="0.000928558531615229"
+    jx="-0.00018706" jy="-0.2895" jz="-0.16935" ax="0" ay="1" az="0"
+    col_radius="0.075" col_length="0.051" col_oy="0.025" />
+
+  <gazebo reference="left_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel">
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
+  </gazebo>
+
+  <ros2_control name="amr_ros_dg_system" type="system">
+    <hardware>
+      <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+    </hardware>
+    <joint name="left_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-30.0</param>
+        <param name="max">30.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+    <joint name="right_wheel_joint">
+      <command_interface name="velocity">
+        <param name="min">-30.0</param>
+        <param name="max">30.0</param>
+      </command_interface>
+      <state_interface name="velocity" />
+      <state_interface name="position" />
+    </joint>
+  </ros2_control>
+
+  <gazebo>
+    <plugin filename="gz_ros2_control-system" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <!-- Dedicated config, not amr_ros_dg_controllers.yaml: that file's joint_state_broadcaster
+           lists the caster joints, which don't exist on this stripped-down test robot. -->
+      <parameters>$(find amr_ros_dg)/config/test_no_casters_controllers.yaml</parameters>
+    </plugin>
+  </gazebo>
+
+</robot>
