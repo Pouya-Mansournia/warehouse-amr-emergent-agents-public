@@ -20,7 +20,7 @@ output directory contents.
    ROS-free logic; standard ROS 2 package conventions elsewhere).
 5. Do not introduce fabricated or estimated results into documentation
    — this project's research-integrity rule (see `README.md`'s
-   "Research integrity" section) applies to contributions too: report
+   "Limitations" section) applies to contributions too: report
    `not measured` rather than a plausible-looking number.
 
 ## Research contributions

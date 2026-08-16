@@ -20,6 +20,6 @@ can be prepared first.
   `.env.example`), never committed to the repository.
 - The LLM never has a direct path to robot motor commands; all
   LLM-backed decisions pass through a schema/safety validator with a
-  deterministic fallback (see `README.md`'s "Safety architecture"
+  deterministic fallback (see `README.md`'s "Safety"
   section). Vulnerabilities in that validation path are considered
   high priority.
