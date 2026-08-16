@@ -4,9 +4,9 @@
 
 A research platform for studying decentralized, fault-tolerant, agentic coordination in a multi-robot warehouse fleet, built on ROS 2 Jazzy and Gazebo Harmonic.
 
-The central question is simple to state: when a fleet loses its centralized manager, can the robots recover useful coordination on their own? This repository tests three ways they might do that (deterministic peer-to-peer negotiation, LLM-based reasoning, and a hybrid of the two) and compares all three against the centralized baseline. A second, additive extension asks a longer-horizon question: does repeated peer-to-peer interaction over many simulated hours give rise to structure that nobody programmed in, like role specialization, peer preference, or resource-sharing conventions?
+When a fleet loses its centralized manager, can the robots recover useful coordination on their own? That's the question I'm testing here. I compare three ways the robots might do it (deterministic peer-to-peer negotiation, LLM-based reasoning, and a hybrid of the two) against the centralized baseline. There's also a second, additive extension that asks a longer-horizon question: does repeated peer-to-peer interaction over many simulated hours produce structure nobody programmed in, like role specialization, peer preference, or resource-sharing conventions?
 
-This repository extends the engineering baseline from [warehouse-amr-ros2](https://github.com/Pouya-Mansournia/warehouse-amr-ros2) (same author) with experiment orchestration, robot health and fault modeling, five coordination modes, and a second isolated long-horizon world, all instrumented for reproducible measurement.
+I built this on top of an earlier project of mine, [warehouse-amr-ros2](https://github.com/Pouya-Mansournia/warehouse-amr-ros2), adding experiment orchestration, robot health and fault modeling, five coordination modes, and a second isolated long-horizon world, all instrumented for reproducible measurement.
 
 ## Architecture
 
@@ -168,7 +168,7 @@ These are pilot-scale results. Check the linked document for exact N, seeds, and
 
 See [`analysis/results/resilience_summary.csv`](analysis/results/resilience_summary.csv) for the full numbers.
 
-**Long-horizon pilot** (N=5 paired seeds, 4 robots, `phase2/`): one of five evaluated candidate collective-behavior patterns meets a pre-registered emergence bar. The rest are not established or are undersampled at this seed count. This is reported honestly as a pilot, not a conclusive emergence claim.
+**Long-horizon pilot** (N=5 paired seeds, 4 robots, `phase2/`): one of five candidate collective-behavior patterns I evaluated meets a pre-registered emergence bar. The rest are either not established or undersampled at this seed count. I'm reporting this as a pilot, not a conclusive emergence claim.
 
 <p align="center">
   <img src="docs/images/phase2_role_persistence.png" width="60%" alt="Top-robot role-persistence ratio by condition">
@@ -200,7 +200,7 @@ See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, 
 
 ## Research integrity
 
-This project follows one rule throughout: never fabricate a result. Metrics this platform genuinely can't measure yet, like collision detection, are reported as `not measured` rather than filled in with a plausible-looking number.
+I follow one rule throughout this project: never fabricate a result. If the platform can't measure something yet, like collision detection, it's reported as `not measured` instead of filled in with a plausible-looking number.
 
 ## Citation
 
@@ -208,7 +208,7 @@ This software is archived on Zenodo: [10.5281/zenodo.21961193](https://doi.org/1
 
 ## Attribution and license
 
-The `src/amr_ros_dg` package is copied from [warehouse-amr-ros2](https://github.com/Pouya-Mansournia/warehouse-amr-ros2), authored by the same person maintaining this repository. See [`src/amr_ros_dg/NOTICE.md`](src/amr_ros_dg/NOTICE.md) for details.
+The `src/amr_ros_dg` package is copied from [warehouse-amr-ros2](https://github.com/Pouya-Mansournia/warehouse-amr-ros2), a project I also wrote. See [`src/amr_ros_dg/NOTICE.md`](src/amr_ros_dg/NOTICE.md) for details.
 
 Licensed under the [BSD 3-Clause License](LICENSE), matching the license declared in each package's `package.xml`.
 

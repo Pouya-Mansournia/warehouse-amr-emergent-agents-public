@@ -1,8 +1,8 @@
 # Technical Notes
 
 Short summary of how the platform works, what its metrics mean, and what's
-still limited. Kept intentionally brief; the code and tests are the source
-of truth.
+still limited. Kept brief on purpose; the code and tests are the source of
+truth.
 
 ## Architecture
 
