@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/readme/hero.svg" alt="warehouse-amr-emergent-agents: decentralized, fault-tolerant coordination research for a multi-robot warehouse fleet, built on ROS 2 Jazzy and Gazebo Harmonic" width="100%">
+</p>
+
 # warehouse-amr-emergent-agents
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21961193.svg)](https://doi.org/10.5281/zenodo.21961193)

@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-label="warehouse-amr-emergent-agents: decentralized, fault-tolerant coordination research for a multi-robot warehouse fleet, built on ROS 2 Jazzy and Gazebo Harmonic">
+  <style>
+    .bg { fill: #f6f8fa; }
+    .grid { stroke: #d0d7de; stroke-width: 1; }
+    .context { fill: #57606a; font: 600 15px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; letter-spacing: 0.06em; text-transform: uppercase; }
+    .title { fill: #0d1117; font: 700 42px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .tagline { fill: #24292f; font: 400 18px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+    .chip-bg { fill: #ffffff; stroke: #d0d7de; stroke-width: 1; }
+    .chip-text { fill: #0969da; font: 600 14px system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #0d1117; }
+      .grid { stroke: #21262d; }
+      .context { fill: #8b949e; }
+      .title { fill: #f0f6fc; }
+      .tagline { fill: #c9d1d9; }
+      .chip-bg { fill: #161b22; stroke: #30363d; }
+      .chip-text { fill: #58a6ff; }
+    }
+  </style>
+
+  <rect class="bg" x="0" y="0" width="1200" height="300"/>
+  <g class="grid" opacity="0.6">
+    <line x1="0" y1="60" x2="1200" y2="60"/>
+    <line x1="0" y1="240" x2="1200" y2="240"/>
+    <line x1="60" y1="0" x2="60" y2="300"/>
+    <line x1="1140" y1="0" x2="1140" y2="300"/>
+  </g>
+
+  <text x="60" y="46" class="context">ROS 2 Jazzy · Gazebo Harmonic · Multi-Robot Coordination Research</text>
+
+  <text x="58" y="118" class="title">warehouse-amr-emergent-agents</text>
+
+  <text x="60" y="156" class="tagline">
+    <tspan x="60" dy="0">Decentralized, fault-tolerant coordination for a multi-robot warehouse fleet:</tspan>
+    <tspan x="60" dy="26">deterministic, LLM-based, and hybrid failover, measured against a centralized baseline.</tspan>
+  </text>
+
+  <g font-family="system-ui, -apple-system, Segoe UI, Helvetica, Arial, sans-serif">
+    <g transform="translate(60,206)">
+      <rect class="chip-bg" x="0" y="0" width="118" height="34" rx="17"/>
+      <text class="chip-text" x="59" y="22" text-anchor="middle">Centralized</text>
+    </g>
+    <g transform="translate(190,206)">
+      <rect class="chip-bg" x="0" y="0" width="150" height="34" rx="17"/>
+      <text class="chip-text" x="75" y="22" text-anchor="middle">Rule-based auction</text>
+    </g>
+    <g transform="translate(352,206)">
+      <rect class="chip-bg" x="0" y="0" width="140" height="34" rx="17"/>
+      <text class="chip-text" x="70" y="22" text-anchor="middle">LLM (Ollama)</text>
+    </g>
+    <g transform="translate(504,206)">
+      <rect class="chip-bg" x="0" y="0" width="88" height="34" rx="17"/>
+      <text class="chip-text" x="44" y="22" text-anchor="middle">Hybrid</text>
+    </g>
+    <g transform="translate(604,206)">
+      <rect class="chip-bg" x="0" y="0" width="220" height="34" rx="17"/>
+      <text class="chip-text" x="110" y="22" text-anchor="middle">Long-horizon emergence (phase2)</text>
+    </g>
+  </g>
+</svg>
