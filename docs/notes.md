@@ -39,9 +39,9 @@ pre-failure activity to compare against.
 
 ## Known limitations
 
-- Live validation has used at most 2 robots (Family I) and 4 robots
-  (`phase2/`). Claims about larger fleets are projections, not direct
-  measurements.
+- Live validation has used at most 2 robots on the main platform and 4
+  robots in `phase2/`. Claims about larger fleets are projections, not
+  direct measurements.
 - Seed counts are pilot scale (3-5 paired seeds), enough to confirm the
   pipeline is correct end to end, not enough for a statistically powered
   comparison.
@@ -53,8 +53,8 @@ pre-failure activity to compare against.
 - Peer-memory state lives only in process memory for the duration of a run
   and isn't persisted to disk.
 - No communication-delay, packet-loss, or task-surge fault injection, and
-  no emergence-analysis metrics in the Family I line of experiments; that
-  side of things is covered separately by `phase2/`.
+  no emergence-analysis metrics on the main platform; that side of things
+  is covered separately by `phase2/`.
 
 Full run-by-run numbers backing these results are in
 `analysis/results/resilience_summary.csv` and `phase2/analysis/results/`.

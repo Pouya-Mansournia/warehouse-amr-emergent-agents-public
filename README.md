@@ -184,11 +184,11 @@ Every LLM-backed decision (Modes D and E) passes through the same schema and saf
 
 ## Limitations
 
-See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, validated, or not yet done. Notable current limitations: live validation has used at most 2 robots (Family I) and 4 robots (`phase2/`), the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions.
+See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, validated, or not yet done. Notable current limitations: live validation has used at most 2 robots on the main platform and 4 robots in `phase2/`, the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions.
 
 ## Roadmap
 
-- Done: five coordination modes, instrumented and pilot-validated (Family I)
+- Done: five coordination modes, instrumented and pilot-validated on the main platform
 - Done: isolated long-horizon world with role-formation, peer-preference, and resource-convention analysis (`phase2/`, pilot-scale)
 - Planned: larger, adequately-seeded campaigns for both families
 - Planned: manuscript submission, see Citation below
