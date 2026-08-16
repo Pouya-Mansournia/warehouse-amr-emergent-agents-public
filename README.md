@@ -25,7 +25,7 @@ flowchart TD
     H --> B
 ```
 
-The LLM never has a path to motor commands. Every backend, regardless of how it decides, returns the same validated `Action` object consumed by an unchanged Nav2 pipeline (see the Safety Architecture section below).
+The LLM never has a path to motor commands. Every backend, regardless of how it decides, returns the same validated `Action` object consumed by an unchanged Nav2 pipeline (see Safety below).
 
 ### Experiment lifecycle
 
@@ -91,7 +91,7 @@ docs/                     Short technical notes: architecture, metrics,
                          and known limitations.
 ```
 
-`experiments/` and `phase2/experiments/` hold raw per-run evidence and are intentionally not tracked in this repository. See Reproducibility below for how to regenerate them.
+`experiments/` and `phase2/experiments/` hold raw per-run evidence and are intentionally not tracked in this repository. See Getting Started below for how to regenerate them.
 
 ## Requirements
 
@@ -130,7 +130,7 @@ python3 analysis/scripts/run_batch.py \
 python3 analysis/scripts/generate_report.py <batch_dir>
 ```
 
-Every run produces an immutable directory under `experiments/<run_id>/` containing raw event logs, per-robot telemetry CSVs, a rosbag, and a computed `summary.json`. That's enough to reconstruct exactly what happened without re-running anything. See [`docs/notes.md`](docs/notes.md).
+Every run produces an immutable directory under `experiments/<run_id>/` containing raw event logs, per-robot telemetry CSVs, a rosbag, and a computed `summary.json`, enough to reconstruct exactly what happened without re-running anything. Simulated-time control (`--time-source simulation`) is used throughout so timing-sensitive results don't depend on host wall-clock performance. See [`docs/notes.md`](docs/notes.md) for details.
 
 ### The long-horizon extension (`phase2/`)
 
@@ -174,17 +174,13 @@ See [`analysis/results/resilience_summary.csv`](analysis/results/resilience_summ
   <img src="docs/images/phase2_role_persistence.png" width="60%" alt="Top-robot role-persistence ratio by condition">
 </p>
 
-## Reproducibility
+## Safety
 
-Every run produces an immutable, self-contained output directory (see Getting Started above). [`docs/notes.md`](docs/notes.md) documents exactly what is captured per run and how to reconstruct it. Simulated-time control (`--time-source simulation`) is used throughout so timing-sensitive results don't depend on host wall-clock performance.
-
-## Safety architecture
-
-Every LLM-backed decision (Modes D and E) passes through the same schema and safety validator before it can become a robot action. A failed validation triggers a deterministic fallback instead of letting an unsafe or malformed action through. The LLM has no path to motor commands; see the architecture diagram above and `src/agent_core/agent_core/`.
+Every LLM-backed decision (the LLM and hybrid modes) passes through the same schema and safety validator before it can become a robot action. A failed validation triggers a deterministic fallback instead of letting an unsafe or malformed action through. The LLM has no path to motor commands, see `src/agent_core/agent_core/` for the validator.
 
 ## Limitations
 
-See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, validated, or not yet done. Notable current limitations: live validation has used at most 2 robots on the main platform and 4 robots in `phase2/`, the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions.
+See [`docs/notes.md`](docs/notes.md) for what's implemented, validated, or not yet done. Live validation has used at most 2 robots on the main platform and 4 robots in `phase2/`, the seed counts are pilot-scale (3 and 5 paired seeds respectively), and there's no collision-based safety metric, only Nav2's own `collision_monitor` interventions. I follow one rule throughout this project: never fabricate a result. If something can't be measured yet, it's reported as `not measured`, not filled in with a plausible-looking number.
 
 ## Roadmap
 
@@ -197,10 +193,6 @@ See [`docs/notes.md`](docs/notes.md) for a short summary of what's implemented, 
 
 - [`docs/notes.md`](docs/notes.md): architecture, metric definitions, reproducibility, and known limitations, in one place.
 - [`phase2/README.md`](phase2/README.md): the long-horizon extension's own scope and isolation rules.
-
-## Research integrity
-
-I follow one rule throughout this project: never fabricate a result. If the platform can't measure something yet, like collision detection, it's reported as `not measured` instead of filled in with a plausible-looking number.
 
 ## Citation
 
