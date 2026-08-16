@@ -1,5 +1,7 @@
 # warehouse-amr-emergent-agents
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.21961193.svg)](https://doi.org/10.5281/zenodo.21961193)
+
 A research platform for studying decentralized, fault-tolerant, agentic coordination in a multi-robot warehouse fleet, built on ROS 2 Jazzy and Gazebo Harmonic.
 
 The central question is simple to state: when a fleet loses its centralized manager, can the robots recover useful coordination on their own? This repository tests three ways they might do that (deterministic peer-to-peer negotiation, LLM-based reasoning, and a hybrid of the two) and compares all three against the centralized baseline. A second, additive extension asks a longer-horizon question: does repeated peer-to-peer interaction over many simulated hours give rise to structure that nobody programmed in, like role specialization, peer preference, or resource-sharing conventions?
@@ -202,7 +204,7 @@ This project follows one rule throughout: never fabricate a result. Metrics this
 
 ## Citation
 
-A manuscript describing this platform and its pilot results is in preparation and not yet published. See [`CITATION.cff`](CITATION.cff) for the current, provisional citation entry. It will be updated with a DOI once a version is published.
+This software is archived on Zenodo: [10.5281/zenodo.21961193](https://doi.org/10.5281/zenodo.21961193). A manuscript describing this platform and its pilot results is in preparation and not yet published. See [`CITATION.cff`](CITATION.cff) for the current citation entry.
 
 ## Attribution and license
 

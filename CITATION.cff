@@ -2,7 +2,7 @@ cff-version: 1.2.0
 message: >-
   If you use this software or its pilot results, please cite it as
   below. A manuscript describing this platform is in preparation and
-  not yet published; this entry will be updated with a DOI/venue once
+  not yet published; this entry will be updated with a venue once
   available.
 type: software
 title: warehouse-amr-emergent-agents
@@ -11,7 +11,8 @@ authors:
     given-names: Pouya
     email: p.mansournia@gmail.com
 repository-code: >-
-  https://github.com/Pouya-Mansournia/warehouse-amr-emergent-agents
+  https://github.com/Pouya-Mansournia/warehouse-amr-emergent-agents-public
+doi: 10.5281/zenodo.21961193
 license: BSD-3-Clause
 version: 0.1.0
 date-released: 2026-08-13
